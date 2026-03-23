@@ -1,0 +1,149 @@
+<?php
+
+namespace BlogQA;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit; // Exit if accessed directly.
+}
+
+/**
+ * Small DOM wrapper for extracting reusable content fragments.
+ */
+class BlogQA_HtmlDocument {
+
+	protected \DOMDocument $document;
+
+	protected \DOMXPath $xpath;
+
+	public function __construct( string $html ) {
+		$this->document = new \DOMDocument( '1.0', 'UTF-8' );
+
+		$previous_state = libxml_use_internal_errors( true );
+		$this->document->loadHTML(
+			'<?xml encoding="utf-8" ?><!DOCTYPE html><html><body>' . $html . '</body></html>'
+		);
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous_state );
+
+		$this->xpath = new \DOMXPath( $this->document );
+	}
+
+	/**
+	 * Return the stripped body text.
+	 */
+	public function get_body_text() : string {
+		$body_nodes = $this->xpath->query( '//body' );
+		if ( ! $body_nodes || 0 === $body_nodes->length ) {
+			return '';
+		}
+
+		$body = $body_nodes->item( 0 );
+
+		return $body ? $this->normalize_text( $body->textContent ) : '';
+	}
+
+	/**
+	 * Return all heading texts for the requested levels.
+	 */
+	public function get_heading_texts( int $min_level = 1, int $max_level = 6 ) : array {
+		$selectors = array();
+
+		for ( $level = max( 1, $min_level ); $level <= min( 6, $max_level ); $level++ ) {
+			$selectors[] = '//h' . $level;
+		}
+
+		return $this->query_texts( implode( ' | ', $selectors ) );
+	}
+
+	/**
+	 * Return the first paragraph text.
+	 */
+	public function get_first_paragraph_text() : string {
+		$paragraphs = $this->query_texts( '//p[1]' );
+
+		return $paragraphs[0] ?? '';
+	}
+
+	/**
+	 * Return all paragraph texts.
+	 */
+	public function get_paragraph_texts() : array {
+		return $this->query_texts( '//p' );
+	}
+
+	/**
+	 * Return the number of H1 tags.
+	 */
+	public function get_h1_count() : int {
+		return (int) $this->xpath->evaluate( 'count(//h1)' );
+	}
+
+	/**
+	 * Return the number of ordered and unordered lists.
+	 */
+	public function get_list_count() : int {
+		return (int) $this->xpath->evaluate( 'count(//ul | //ol)' );
+	}
+
+	/**
+	 * Return normalized image attributes.
+	 *
+	 * @return array<int, array<string, string>>
+	 */
+	public function get_images() : array {
+		$nodes = $this->xpath->query( '//img' );
+
+		if ( ! $nodes ) {
+			return array();
+		}
+
+		$images = array();
+
+		foreach ( $nodes as $node ) {
+			if ( ! $node instanceof \DOMElement ) {
+				continue;
+			}
+
+			$images[] = array(
+				'src' => trim( (string) $node->getAttribute( 'src' ) ),
+				'alt' => $this->normalize_text( (string) $node->getAttribute( 'alt' ) ),
+			);
+		}
+
+		return $images;
+	}
+
+	/**
+	 * Query and normalize node text content.
+	 *
+	 * @return array<int, string>
+	 */
+	protected function query_texts( string $query ) : array {
+		$nodes = $this->xpath->query( $query );
+
+		if ( ! $nodes ) {
+			return array();
+		}
+
+		$texts = array();
+
+		foreach ( $nodes as $node ) {
+			$text = $this->normalize_text( $node->textContent ?? '' );
+
+			if ( '' === $text ) {
+				continue;
+			}
+
+			$texts[] = $text;
+		}
+
+		return $texts;
+	}
+
+	/**
+	 * Collapse repeated whitespace after stripping tags.
+	 */
+	protected function normalize_text( string $text ) : string {
+		return trim( (string) preg_replace( '/\s+/u', ' ', wp_strip_all_tags( $text ) ) );
+	}
+}
