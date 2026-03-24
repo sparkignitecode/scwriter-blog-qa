@@ -114,6 +114,40 @@ class BlogQA_HtmlDocument {
 	}
 
 	/**
+	 * Return normalized link attributes and anchor text.
+	 *
+	 * @return array<int, array<string, string>>
+	 */
+	public function get_links() : array {
+		$nodes = $this->xpath->query( '//a[@href]' );
+
+		if ( ! $nodes ) {
+			return array();
+		}
+
+		$links = array();
+
+		foreach ( $nodes as $node ) {
+			if ( ! $node instanceof \DOMElement ) {
+				continue;
+			}
+
+			$href = trim( (string) $node->getAttribute( 'href' ) );
+
+			if ( '' === $href ) {
+				continue;
+			}
+
+			$links[] = array(
+				'href' => $href,
+				'text' => $this->normalize_text( $node->textContent ?? '' ),
+			);
+		}
+
+		return $links;
+	}
+
+	/**
 	 * Query and normalize node text content.
 	 *
 	 * @return array<int, string>

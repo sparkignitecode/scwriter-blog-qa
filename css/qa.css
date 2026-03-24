@@ -29,7 +29,10 @@
 }
 
 .blogqa-field {
+	display: flex;
 	flex: 1 1 280px;
+	flex-direction: column;
+	gap: 6px;
 	min-width: 240px;
 }
 
@@ -42,15 +45,28 @@
 	text-transform: uppercase;
 }
 
-.blogqa-field input[type="text"] {
+.blogqa-field input[type="text"],
+.blogqa-field input[type="url"],
+.blogqa-field textarea {
+	box-sizing: border-box;
 	border-color: var(--blogqa-border);
 	border-radius: 8px;
-	min-height: 38px;
+	display: block;
 	width: 100%;
 }
 
+.blogqa-field input[type="text"],
+.blogqa-field input[type="url"] {
+	min-height: 38px;
+}
+
+.blogqa-field textarea {
+	min-height: 96px;
+	resize: vertical;
+}
+
 .blogqa-field .description {
-	margin: 8px 0 0;
+	margin: 0;
 }
 
 .blogqa-actions {

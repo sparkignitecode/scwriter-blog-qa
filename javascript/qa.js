@@ -145,12 +145,16 @@
 		return "Request failed with status " + response.status + ".";
 	}
 
-	function getTrimmedLocation(locationInput) {
-		if (!locationInput || typeof locationInput.value !== "string") {
+	function getTrimmedValue(input) {
+		if (!input || typeof input.value !== "string") {
 			return "";
 		}
 
-		return locationInput.value.trim();
+		return input.value.trim();
+	}
+
+	function getTrimmedLocation(locationInput) {
+		return getTrimmedValue(locationInput);
 	}
 
 	onReady(function () {
@@ -158,6 +162,9 @@
 		var strings = data.strings || {};
 		var root = document.getElementById("blogqa-meta-box");
 		var locationInput = document.getElementById("blogqa-location");
+		var pillarPostUrlInput = document.getElementById("blogqa-pillar-post-url");
+		var pbSecondaryKeywordsField = document.getElementById("blogqa-pb-secondary-keywords-field");
+		var pbSecondaryKeywordsInput = document.getElementById("blogqa-pb-secondary-keywords");
 		var runButton = document.getElementById("blogqa-run-button");
 		var spinner = document.getElementById("blogqa-spinner");
 		var scoreNode = document.getElementById("blogqa-score");
@@ -273,12 +280,38 @@
 			errorNode.textContent = "";
 		}
 
+		function togglePbSecondaryKeywords() {
+			if (!pbSecondaryKeywordsField) {
+				return;
+			}
+
+			pbSecondaryKeywordsField.style.display =
+				getTrimmedValue(pillarPostUrlInput) !== "" ? "" : "none";
+		}
+
 		if (locationInput && data.location && !locationInput.value) {
 			locationInput.value = String(data.location);
 		}
 
+		if (pillarPostUrlInput && data.pillarPostUrl && !pillarPostUrlInput.value) {
+			pillarPostUrlInput.value = String(data.pillarPostUrl);
+		}
+
+		if (
+			pbSecondaryKeywordsInput &&
+			data.pbSecondaryKeywords &&
+			!pbSecondaryKeywordsInput.value
+		) {
+			pbSecondaryKeywordsInput.value = String(data.pbSecondaryKeywords);
+		}
+
+		togglePbSecondaryKeywords();
 		renderResults(Array.isArray(data.initialResults) ? data.initialResults : []);
 		lastRunNode.textContent = formatLastRun(data.lastRun, strings);
+
+		if (pillarPostUrlInput) {
+			pillarPostUrlInput.addEventListener("input", togglePbSecondaryKeywords);
+		}
 
 		runButton.addEventListener("click", function () {
 			if (!data.restUrl) {
@@ -301,6 +334,13 @@
 			clearError();
 			setLoading(true);
 
+			var pillarPostUrlValue = getTrimmedValue(pillarPostUrlInput);
+			var pbSecondaryKeywordsValue =
+				pbSecondaryKeywordsInput &&
+				typeof pbSecondaryKeywordsInput.value === "string"
+					? pbSecondaryKeywordsInput.value
+					: "";
+
 			fetch(data.restUrl, {
 				method: "POST",
 				credentials: "same-origin",
@@ -310,6 +350,10 @@
 				},
 				body: JSON.stringify({
 					location: locationValue,
+					pillar_post_url: pillarPostUrlValue,
+					pb_secondary_keywords: pillarPostUrlValue
+						? pbSecondaryKeywordsValue
+						: "",
 				}),
 			})
 				.then(function (response) {

@@ -3,6 +3,7 @@
 namespace BlogQA\API;
 
 use BlogQA\BlogQA_Checker;
+use BlogQA\BlogQA_PillarPostFetcher;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -73,6 +74,9 @@ class BlogQA_QAEndpoint {
 		}
 
 		$location = sanitize_text_field( trim( (string) $request->get_param( 'location' ) ) );
+		$pillar_post_url = esc_url_raw( trim( (string) $request->get_param( 'pillar_post_url' ) ) );
+		$pb_secondary_keywords = trim( sanitize_textarea_field( (string) $request->get_param( 'pb_secondary_keywords' ) ) );
+
 		if ( '' === $location ) {
 			return new WP_Error(
 				'blogqa_location_required',
@@ -82,8 +86,14 @@ class BlogQA_QAEndpoint {
 		}
 
 		update_post_meta( $post_id, '_blog_qa_location', $location );
+		update_post_meta( $post_id, '_blog_qa_pillar_post_url', $pillar_post_url );
+		update_post_meta( $post_id, '_blog_qa_pb_secondary_keywords', $pb_secondary_keywords );
 
-		$results = ( new BlogQA_Checker( $post_id ) )->run();
+		$pb_data = '' !== $pillar_post_url
+			? BlogQA_PillarPostFetcher::fetch( $pillar_post_url )
+			: null;
+
+		$results = ( new BlogQA_Checker( $post_id ) )->run( $pb_data, $pb_secondary_keywords, $pillar_post_url );
 
 		return new WP_REST_Response(
 			array(

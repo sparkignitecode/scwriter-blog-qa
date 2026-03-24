@@ -9,6 +9,7 @@ use BlogQA\Checks\KeywordCluster;
 use BlogQA\Checks\KeywordPlacement;
 use BlogQA\Checks\Location;
 use BlogQA\Checks\Metadata;
+use BlogQA\Checks\BlogQA_PillarPostChecks;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
@@ -28,9 +29,10 @@ class BlogQA_Checker {
 	/**
 	 * Run all checks and persist the latest result set.
 	 *
+	 * @param array<string, string>|null $pb_data
 	 * @return array<int, array<string, mixed>>
 	 */
-	public function run() : array {
+	public function run( ?array $pb_data = null, string $pb_secondary_keywords = '', string $pillar_post_url = '' ) : array {
 		$post_data = ( new BlogQA_PostData( $this->post_id ) )->get_data();
 
 		$results = array(
@@ -40,6 +42,7 @@ class BlogQA_Checker {
 			( new Images() )->run( $post_data ),
 			( new Location() )->run( $post_data ),
 			$this->build_strategy_section( $post_data ),
+			( new BlogQA_PillarPostChecks() )->run( $post_data, $pb_data, $pb_secondary_keywords, $pillar_post_url ),
 		);
 
 		$this->persist_results( $results );

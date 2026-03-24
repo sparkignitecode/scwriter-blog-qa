@@ -15,6 +15,7 @@ class BlogQA_Dashboard {
 
 	public function __construct() {
 		add_action( 'add_meta_boxes', array( $this, 'register_meta_box' ), 10, 2 );
+		add_action( 'save_post', array( $this, 'save_meta_box_fields' ) );
 	}
 
 	/**
@@ -44,6 +45,8 @@ class BlogQA_Dashboard {
 		}
 
 		$location = $this->get_initial_location( $post->ID );
+		$pillar_post_url = trim( (string) get_post_meta( $post->ID, '_blog_qa_pillar_post_url', true ) );
+		$pb_secondary_keywords = trim( (string) get_post_meta( $post->ID, '_blog_qa_pb_secondary_keywords', true ) );
 		$results = get_post_meta( $post->ID, '_blog_qa_results', true );
 		$last_run = (int) get_post_meta( $post->ID, '_blog_qa_last_run', true );
 		$is_ai_key_configured = '' !== trim( ( new \BlogQA\Checks\AIStrategy() )->get_openai_api_key() );
@@ -52,12 +55,49 @@ class BlogQA_Dashboard {
 			$results = array();
 		}
 
-		$this->localize_script( $post->ID, $location, $results, $last_run );
+		$this->localize_script( $post->ID, $location, $pillar_post_url, $pb_secondary_keywords, $results, $last_run );
 
 		$formatted_last_run = $this->format_last_run( $last_run );
 		$score_text = $this->format_score( $results );
 
 		require BLOGQA_PLUGIN_DIR . 'views/meta_box.php';
+	}
+
+	/**
+	 * Persist meta box fields on normal post saves.
+	 */
+	public function save_meta_box_fields( int $post_id ) : void {
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+			return;
+		}
+
+		if ( wp_is_post_revision( $post_id ) ) {
+			return;
+		}
+
+		$post = get_post( $post_id );
+
+		if ( ! $post instanceof WP_Post || 'post' !== $post->post_type ) {
+			return;
+		}
+
+		if ( ! isset( $_POST['blogqa_meta_box_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['blogqa_meta_box_nonce'] ) ), 'blogqa_meta_box' ) ) {
+			return;
+		}
+
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return;
+		}
+
+		$pillar_post_url = isset( $_POST['blogqa_pillar_post_url'] )
+			? esc_url_raw( trim( wp_unslash( $_POST['blogqa_pillar_post_url'] ) ) )
+			: '';
+		$pb_secondary_keywords = isset( $_POST['blogqa_pb_secondary_keywords'] )
+			? trim( sanitize_textarea_field( wp_unslash( $_POST['blogqa_pb_secondary_keywords'] ) ) )
+			: '';
+
+		$this->update_optional_meta( $post_id, '_blog_qa_pillar_post_url', $pillar_post_url );
+		$this->update_optional_meta( $post_id, '_blog_qa_pb_secondary_keywords', $pb_secondary_keywords );
 	}
 
 	/**
@@ -94,9 +134,11 @@ class BlogQA_Dashboard {
 	/**
 	 * Pass initial state to the admin script.
 	 *
+	 * @param string $pillar_post_url
+	 * @param string $pb_secondary_keywords
 	 * @param array<int, array<string, mixed>> $results
 	 */
-	protected function localize_script( int $post_id, string $location, array $results, int $last_run ) : void {
+	protected function localize_script( int $post_id, string $location, string $pillar_post_url, string $pb_secondary_keywords, array $results, int $last_run ) : void {
 		wp_localize_script(
 			BLOGQA_PREFIX . '-qa',
 			'scwriterBlogQaData',
@@ -105,6 +147,8 @@ class BlogQA_Dashboard {
 				'nonce' => wp_create_nonce( 'wp_rest' ),
 				'postId' => $post_id,
 				'location' => $location,
+				'pillarPostUrl' => $pillar_post_url,
+				'pbSecondaryKeywords' => $pb_secondary_keywords,
 				'initialResults' => $results,
 				'lastRun' => $last_run,
 				'strings' => array(
@@ -180,5 +224,17 @@ class BlogQA_Dashboard {
 			$passed,
 			$total
 		);
+	}
+
+	/**
+	 * Update or delete a meta value depending on whether it is empty.
+	 */
+	protected function update_optional_meta( int $post_id, string $meta_key, string $value ) : void {
+		if ( '' === $value ) {
+			delete_post_meta( $post_id, $meta_key );
+			return;
+		}
+
+		update_post_meta( $post_id, $meta_key, $value );
 	}
 }

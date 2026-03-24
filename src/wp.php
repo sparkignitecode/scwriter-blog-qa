@@ -3,6 +3,7 @@
 namespace BlogQA;
 
 use BlogQA\API\BlogQA_QAEndpoint;
+use BlogQA\API\BlogQA_SparkSeoEndpoint;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
@@ -17,9 +18,12 @@ class BlogQA_WP {
 
 	protected BlogQA_QAEndpoint $qa_endpoint;
 
+	protected BlogQA_SparkSeoEndpoint $spark_seo_endpoint;
+
 	public function __construct() {
 		$this->dashboard = new BlogQA_Dashboard();
 		$this->qa_endpoint = new BlogQA_QAEndpoint();
+		$this->spark_seo_endpoint = new BlogQA_SparkSeoEndpoint();
 		$this->register_hook_callbacks();
 	}
 

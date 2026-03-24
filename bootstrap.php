@@ -28,6 +28,8 @@ define( 'BLOGQA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
 require_once __DIR__ . '/src/html_document.php';
 require_once __DIR__ . '/src/post_data.php';
+require_once __DIR__ . '/src/pillar_post_fetcher.php';
+require_once __DIR__ . '/src/link_classifier.php';
 require_once __DIR__ . '/src/checks/base.php';
 require_once __DIR__ . '/src/checks/keyword_placement.php';
 require_once __DIR__ . '/src/checks/content_quality.php';
@@ -36,8 +38,10 @@ require_once __DIR__ . '/src/checks/images.php';
 require_once __DIR__ . '/src/checks/location.php';
 require_once __DIR__ . '/src/checks/keyword_cluster.php';
 require_once __DIR__ . '/src/checks/ai_strategy.php';
+require_once __DIR__ . '/src/checks/pillar_post.php';
 require_once __DIR__ . '/src/checker.php';
 require_once __DIR__ . '/src/api/qa_endpoint.php';
+require_once __DIR__ . '/src/api/spark_seo_endpoint.php';
 require_once __DIR__ . '/src/dashboard.php';
 require_once __DIR__ . '/src/wp.php';
 
