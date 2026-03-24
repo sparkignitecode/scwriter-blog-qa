@@ -19,18 +19,22 @@ class KeywordCluster extends BlogQA_CheckBase {
 	 */
 	public function run( array $post_data ) : array {
 		$main_keyword = (string) ( $post_data['main_keyword'] ?? '' );
-		$keyword_cluster = (string) ( $post_data['keyword_cluster'] ?? '' );
+		$secondary_keywords = is_array( $post_data['secondary_keywords'] ?? null ) ? $post_data['secondary_keywords'] : array();
 
 		if ( '' === $main_keyword ) {
-			return $this->build_check( '6.2', 'Main keyword appears in the keyword cluster', 'skipped', 'Main keyword not set.' );
+			return $this->build_check( '6.2', 'Main keyword appears in the secondary keywords', 'skipped', 'Main keyword not set.' );
 		}
 
-		if ( '' === $keyword_cluster ) {
-			return $this->build_check( '6.2', 'Main keyword appears in the keyword cluster', 'skipped', 'Keyword cluster not set' );
+		if ( empty( $secondary_keywords ) ) {
+			return $this->build_check( '6.2', 'Main keyword appears in the secondary keywords', 'skipped', 'Secondary keywords not set.' );
 		}
 
-		return $this->contains( $keyword_cluster, $main_keyword )
-			? $this->build_check( '6.2', 'Main keyword appears in the keyword cluster', 'pass' )
-			: $this->build_check( '6.2', 'Main keyword appears in the keyword cluster', 'fail', 'Main keyword not found in the keyword cluster value.' );
+		foreach ( $secondary_keywords as $secondary_keyword ) {
+			if ( $this->contains( (string) $secondary_keyword, $main_keyword ) ) {
+				return $this->build_check( '6.2', 'Main keyword appears in the secondary keywords', 'pass' );
+			}
+		}
+
+		return $this->build_check( '6.2', 'Main keyword appears in the secondary keywords', 'fail', 'Main keyword not found in the secondary keywords list.' );
 	}
 }

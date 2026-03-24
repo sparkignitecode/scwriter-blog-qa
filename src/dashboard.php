@@ -44,7 +44,6 @@ class BlogQA_Dashboard {
 		}
 
 		$location = (string) get_post_meta( $post->ID, '_blog_qa_location', true );
-		$keyword_cluster = (string) get_post_meta( $post->ID, '_blog_qa_keyword_cluster', true );
 		$results = get_post_meta( $post->ID, '_blog_qa_results', true );
 		$last_run = (int) get_post_meta( $post->ID, '_blog_qa_last_run', true );
 		$is_ai_key_configured = '' !== trim( ( new \BlogQA\Checks\AIStrategy() )->get_openai_api_key() );
@@ -53,7 +52,7 @@ class BlogQA_Dashboard {
 			$results = array();
 		}
 
-		$this->localize_script( $post->ID, $location, $keyword_cluster, $results, $last_run );
+		$this->localize_script( $post->ID, $location, $results, $last_run );
 
 		$formatted_last_run = $this->format_last_run( $last_run );
 		$score_text = $this->format_score( $results );
@@ -73,7 +72,7 @@ class BlogQA_Dashboard {
 	 *
 	 * @param array<int, array<string, mixed>> $results
 	 */
-	protected function localize_script( int $post_id, string $location, string $keyword_cluster, array $results, int $last_run ) : void {
+	protected function localize_script( int $post_id, string $location, array $results, int $last_run ) : void {
 		wp_localize_script(
 			BLOGQA_PREFIX . '-qa',
 			'scwriterBlogQaData',
@@ -82,7 +81,6 @@ class BlogQA_Dashboard {
 				'nonce' => wp_create_nonce( 'wp_rest' ),
 				'postId' => $post_id,
 				'location' => $location,
-				'keywordCluster' => $keyword_cluster,
 				'initialResults' => $results,
 				'lastRun' => $last_run,
 				'strings' => array(
@@ -93,7 +91,6 @@ class BlogQA_Dashboard {
 					'scoreEmpty' => __( 'No results yet', 'scwriter-blog-qa' ),
 					'errorPrefix' => __( 'Unable to run QA:', 'scwriter-blog-qa' ),
 					'locationRequired' => __( 'Location is required to run QA.', 'scwriter-blog-qa' ),
-					'keywordClusterRequired' => __( 'Keyword cluster is required to run QA.', 'scwriter-blog-qa' ),
 				),
 			)
 		);

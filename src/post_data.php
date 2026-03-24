@@ -35,7 +35,6 @@ class BlogQA_PostData {
 			'meta_title' => $this->get_meta_title(),
 			'meta_description' => $this->get_meta_description(),
 			'secondary_keywords' => $this->get_secondary_keywords(),
-			'keyword_cluster' => $this->get_keyword_cluster(),
 			'location' => $this->get_location(),
 			'content' => $this->get_content(),
 			'slug' => $this->get_slug(),
@@ -113,19 +112,6 @@ class BlogQA_PostData {
 	 */
 	public function get_secondary_keywords() : array {
 		return $this->normalize_keyword_list( get_post_meta( $this->post_id, 'keywords', true ) );
-	}
-
-	/**
-	 * Return the keyword cluster string.
-	 */
-	public function get_keyword_cluster() : string {
-		$qa_keyword_cluster = $this->normalize_string( get_post_meta( $this->post_id, '_blog_qa_keyword_cluster', true ) );
-
-		if ( '' !== $qa_keyword_cluster ) {
-			return $qa_keyword_cluster;
-		}
-
-		return $this->normalize_string( get_post_meta( $this->post_id, 'keyword_cluster', true ) );
 	}
 
 	/**

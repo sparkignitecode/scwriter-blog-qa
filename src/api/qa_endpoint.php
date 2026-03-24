@@ -73,8 +73,6 @@ class BlogQA_QAEndpoint {
 		}
 
 		$location = sanitize_text_field( trim( (string) $request->get_param( 'location' ) ) );
-		$keyword_cluster = sanitize_text_field( trim( (string) $request->get_param( 'keyword_cluster' ) ) );
-
 		if ( '' === $location ) {
 			return new WP_Error(
 				'blogqa_location_required',
@@ -83,16 +81,7 @@ class BlogQA_QAEndpoint {
 			);
 		}
 
-		if ( '' === $keyword_cluster ) {
-			return new WP_Error(
-				'blogqa_keyword_cluster_required',
-				__( 'Keyword cluster is required to run QA.', 'scwriter-blog-qa' ),
-				array( 'status' => 400 )
-			);
-		}
-
 		update_post_meta( $post_id, '_blog_qa_location', $location );
-		update_post_meta( $post_id, '_blog_qa_keyword_cluster', $keyword_cluster );
 
 		$results = ( new BlogQA_Checker( $post_id ) )->run();
 

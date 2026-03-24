@@ -3,7 +3,6 @@
  * SCwriter Blog QA meta box template.
  *
  * @var string $location
- * @var string $keyword_cluster
  * @var string $formatted_last_run
  * @var string $score_text
  * @var array<int, array<string, mixed>> $results
@@ -33,26 +32,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 			/>
 			<p id="blogqa-location-help" class="description">
 				<?php esc_html_e( 'Location must be set before running QA.', 'scwriter-blog-qa' ); ?>
-			</p>
-		</div>
-
-		<div class="blogqa-field">
-			<label class="blogqa-label" for="blogqa-keyword-cluster">
-				<?php esc_html_e( 'Keyword Cluster', 'scwriter-blog-qa' ); ?>
-				<span class="required">*</span>
-			</label>
-			<input
-				type="text"
-				id="blogqa-keyword-cluster"
-				class="regular-text"
-				value="<?php echo esc_attr( $keyword_cluster ); ?>"
-				required
-				aria-required="true"
-				aria-describedby="blogqa-keyword-cluster-help"
-				placeholder="<?php esc_attr_e( 'Enter the target keyword cluster', 'scwriter-blog-qa' ); ?>"
-			/>
-			<p id="blogqa-keyword-cluster-help" class="description">
-				<?php esc_html_e( 'Keyword cluster must be set before running QA.', 'scwriter-blog-qa' ); ?>
 			</p>
 		</div>
 

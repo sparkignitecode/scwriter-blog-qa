@@ -153,20 +153,11 @@
 		return locationInput.value.trim();
 	}
 
-	function getTrimmedKeywordCluster(keywordClusterInput) {
-		if (!keywordClusterInput || typeof keywordClusterInput.value !== "string") {
-			return "";
-		}
-
-		return keywordClusterInput.value.trim();
-	}
-
 	onReady(function () {
 		var data = window.scwriterBlogQaData || {};
 		var strings = data.strings || {};
 		var root = document.getElementById("blogqa-meta-box");
 		var locationInput = document.getElementById("blogqa-location");
-		var keywordClusterInput = document.getElementById("blogqa-keyword-cluster");
 		var runButton = document.getElementById("blogqa-run-button");
 		var spinner = document.getElementById("blogqa-spinner");
 		var scoreNode = document.getElementById("blogqa-score");
@@ -286,10 +277,6 @@
 			locationInput.value = String(data.location);
 		}
 
-		if (keywordClusterInput && data.keywordCluster && !keywordClusterInput.value) {
-			keywordClusterInput.value = String(data.keywordCluster);
-		}
-
 		renderResults(Array.isArray(data.initialResults) ? data.initialResults : []);
 		lastRunNode.textContent = formatLastRun(data.lastRun, strings);
 
@@ -300,25 +287,12 @@
 			}
 
 			var locationValue = getTrimmedLocation(locationInput);
-			var keywordClusterValue = getTrimmedKeywordCluster(keywordClusterInput);
 
 			if (!locationValue) {
 				setError(strings.locationRequired || "Location is required to run QA.");
 
 				if (locationInput) {
 					locationInput.focus();
-				}
-
-				return;
-			}
-
-			if (!keywordClusterValue) {
-				setError(
-					strings.keywordClusterRequired || "Keyword cluster is required to run QA."
-				);
-
-				if (keywordClusterInput) {
-					keywordClusterInput.focus();
 				}
 
 				return;
@@ -336,7 +310,6 @@
 				},
 				body: JSON.stringify({
 					location: locationValue,
-					keyword_cluster: keywordClusterValue,
 				}),
 			})
 				.then(function (response) {

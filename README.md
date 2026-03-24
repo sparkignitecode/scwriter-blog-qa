@@ -2,7 +2,7 @@
 
 SCwriter Blog QA adds a post-level QA panel to the WordPress editor so editors can run a consistent set of content checks before publishing.
 
-It is built for the `post` post type and focuses on blog-specific QA such as keyword placement, metadata, image coverage, location references, keyword cluster coverage, heading structure, and AI-reviewed strategy checks.
+It is built for the `post` post type and focuses on blog-specific QA such as keyword placement, metadata, image coverage, location references, heading structure, and AI-reviewed strategy checks.
 
 ## What It Does
 
@@ -23,8 +23,6 @@ Checks are grouped into two broad categories:
 - WordPress with access to edit posts
 - The `scwriter-blog-qa` plugin installed and activated
 - A valid location entered before running QA
-- A valid keyword cluster entered before running QA
-
 For AI strategy checks:
 
 - Add an OpenAI API key to `wp-content/plugins/scwriter-blog-qa/env.php`
@@ -44,10 +42,9 @@ If no OpenAI API key is configured in `env.php`, the meta box shows a warning an
 1. Open a `post` in the WordPress editor.
 2. Find the **Blog QA** meta box.
 3. Enter the location you want the post evaluated against.
-4. Enter the keyword cluster you want the post evaluated against.
-5. Click **Run QA**.
-6. Review the returned results and update the post as needed.
-7. Run QA again to confirm fixes.
+4. Click **Run QA**.
+5. Review the returned results and update the post as needed.
+6. Run QA again to confirm fixes.
 
 ## What Gets Checked
 
@@ -58,7 +55,7 @@ The plugin evaluates the post against a fixed checklist that includes:
 - Meta title and meta description quality
 - Image coverage and alt-text related checks
 - Location usage and heading/count rules tied to the selected location
-- Keyword clustering and topical relevance
+- Main keyword coverage within the post's `keywords` meta
 - AI strategy feedback using `gpt-5-mini`
 
 Some checks may be reported as skipped when their prerequisites are not available, such as missing SEO metadata or a missing OpenAI API key.
@@ -72,7 +69,6 @@ Only users who can edit the specific post can run QA for that post.
 The plugin stores QA data as post meta on the post being reviewed:
 
 - Selected QA location
-- Selected QA keyword cluster
 - Most recent QA results payload
 - Timestamp of the last run
 
@@ -90,7 +86,7 @@ The endpoint requires normal WordPress authentication and post-level edit permis
 
 **QA run is blocked before starting**
 
-The Location and Keyword Cluster fields are required. Add the missing value and run the check again.
+The Location field is required. Add it and run the check again.
 
 **AI strategy checks are skipped**
 
