@@ -77,11 +77,18 @@ class BlogQA_Dashboard {
 			return $location;
 		}
 
-		$brand_meta_key = defined( 'SCWRITER_PREFIX' )
+		$brand_name = trim( (string) get_post_meta( $post_id, 'brand_name', true ) );
+
+		if ( '' !== $brand_name ) {
+			return $brand_name;
+		}
+
+		// Backward compatibility for posts created before the meta key rename.
+		$legacy_brand_meta_key = defined( 'SCWRITER_PREFIX' )
 			? SCWRITER_PREFIX . '_brand_name'
 			: 'scwriter__brand_name';
 
-		return trim( (string) get_post_meta( $post_id, $brand_meta_key, true ) );
+		return trim( (string) get_post_meta( $post_id, $legacy_brand_meta_key, true ) );
 	}
 
 	/**
