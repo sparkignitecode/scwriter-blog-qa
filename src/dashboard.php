@@ -77,7 +77,11 @@ class BlogQA_Dashboard {
 			return $location;
 		}
 
-		return trim( (string) get_post_meta( $post_id, 'brand_name', true ) );
+		$brand_meta_key = defined( 'SCWRITER_PREFIX' )
+			? SCWRITER_PREFIX . '_brand_name'
+			: 'scwriter__brand_name';
+
+		return trim( (string) get_post_meta( $post_id, $brand_meta_key, true ) );
 	}
 
 	/**

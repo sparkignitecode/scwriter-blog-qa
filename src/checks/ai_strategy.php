@@ -131,8 +131,7 @@ class AIStrategy extends BlogQA_CheckBase {
 	protected function build_prompt( array $post_data ) : string {
 		$title = (string) ( $post_data['title'] ?? '' );
 		$main_keyword = (string) ( $post_data['main_keyword'] ?? '' );
-		$content = (string) ( $post_data['content'] ?? '' );
-		$excerpt = $this->get_excerpt( $content, 500 );
+		$content = $this->get_plain_content( (string) ( $post_data['content'] ?? '' ) );
 
 		return implode(
 			"\n\n",
@@ -140,33 +139,20 @@ class AIStrategy extends BlogQA_CheckBase {
 				'Check the following post and return only the required JSON object.',
 				'The title should be judged for commercial wording like buy, hire, best, affordable, cheap, top, service, or company.',
 				'The main keyword should be judged as informational or commercial intent.',
-				'The excerpt should be judged for spelling, grammar, punctuation, formatting artifacts, and obvious capitalization inconsistencies.',
+				'The full content text should be judged for spelling, grammar, punctuation, formatting artifacts, and obvious capitalization inconsistencies.',
 				'For any failed check, return a short list of concrete issues using newline-separated bullets that begin with "- ".',
 				'Title: ' . $title,
 				'Main keyword: ' . $main_keyword,
-				'Excerpt: ' . $excerpt,
+				'Content: ' . $content,
 			)
 		);
 	}
 
 	/**
-	 * Return the first N words from the content body.
+	 * Return full post content as plain text with HTML removed.
 	 */
-	protected function get_excerpt( string $content, int $word_limit ) : string {
-		$words = preg_split( '/\s+/u', trim( wp_strip_all_tags( $content ) ) );
-
-		if ( ! is_array( $words ) ) {
-			return '';
-		}
-
-		$words = array_values(
-			array_filter(
-				array_map( 'trim', $words ),
-				static fn( string $word ) : bool => '' !== $word
-			)
-		);
-
-		return implode( ' ', array_slice( $words, 0, $word_limit ) );
+	protected function get_plain_content( string $content ) : string {
+		return trim( preg_replace( '/\s+/u', ' ', wp_strip_all_tags( $content ) ) ?? '' );
 	}
 
 	/**
