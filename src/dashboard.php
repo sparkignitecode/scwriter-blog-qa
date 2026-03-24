@@ -43,7 +43,7 @@ class BlogQA_Dashboard {
 			return;
 		}
 
-		$location = (string) get_post_meta( $post->ID, '_blog_qa_location', true );
+		$location = $this->get_initial_location( $post->ID );
 		$results = get_post_meta( $post->ID, '_blog_qa_results', true );
 		$last_run = (int) get_post_meta( $post->ID, '_blog_qa_last_run', true );
 		$is_ai_key_configured = '' !== trim( ( new \BlogQA\Checks\AIStrategy() )->get_openai_api_key() );
@@ -65,6 +65,19 @@ class BlogQA_Dashboard {
 	 */
 	protected function can_edit_post( WP_Post $post ) : bool {
 		return current_user_can( 'edit_post', $post->ID );
+	}
+
+	/**
+	 * Return the initial location value for the meta box.
+	 */
+	protected function get_initial_location( int $post_id ) : string {
+		$location = trim( (string) get_post_meta( $post_id, '_blog_qa_location', true ) );
+
+		if ( '' !== $location ) {
+			return $location;
+		}
+
+		return trim( (string) get_post_meta( $post_id, 'brand_name', true ) );
 	}
 
 	/**

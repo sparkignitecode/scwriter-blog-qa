@@ -13,6 +13,8 @@ From the post edit screen, the plugin adds a **Blog QA** meta box where an edito
 - Review pass, fail, and skipped results in the editor
 - Re-run checks after making content changes
 
+If no QA-specific location has been saved yet, the Location field defaults from the post's `brand_name` meta.
+
 Checks are grouped into two broad categories:
 
 - Programmatic checks for content structure and metadata

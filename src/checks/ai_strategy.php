@@ -32,7 +32,7 @@ class AIStrategy extends BlogQA_CheckBase {
 			'messages' => array(
 				array(
 					'role' => 'system',
-					'content' => 'You review SEO blog content and return only a JSON object. The object must contain title_not_commercial, keyword_is_informational, and no_grammar_errors. Each key must contain pass (boolean) and reason (string).',
+					'content' => 'You review SEO blog content and return only a JSON object. The object must contain title_not_commercial, keyword_is_informational, and no_grammar_errors. Each key must contain pass (boolean) and reason (string). Reasons must be concise. When pass is false, format reason as a short bullet-style list using separate lines that each start with "- ". Include at most 4 bullets. When pass is true, use a single short sentence.',
 				),
 				array(
 					'role' => 'user',
@@ -77,19 +77,19 @@ class AIStrategy extends BlogQA_CheckBase {
 					'6.1',
 					'Title is non-commercial',
 					(bool) $payload['title_not_commercial']['pass'] ? 'pass' : 'fail',
-					(string) $payload['title_not_commercial']['reason']
+					$this->normalize_reason( (string) $payload['title_not_commercial']['reason'] )
 				),
 				$this->build_check(
 					'6.3',
 					'Main keyword is informational',
 					(bool) $payload['keyword_is_informational']['pass'] ? 'pass' : 'fail',
-					(string) $payload['keyword_is_informational']['reason']
+					$this->normalize_reason( (string) $payload['keyword_is_informational']['reason'] )
 				),
 				$this->build_check(
 					'6.4',
 					'Content has no spelling or grammar errors',
 					(bool) $payload['no_grammar_errors']['pass'] ? 'pass' : 'fail',
-					(string) $payload['no_grammar_errors']['reason']
+					$this->normalize_reason( (string) $payload['no_grammar_errors']['reason'] )
 				),
 			);
 		} catch ( \Throwable $exception ) {
@@ -140,7 +140,8 @@ class AIStrategy extends BlogQA_CheckBase {
 				'Check the following post and return only the required JSON object.',
 				'The title should be judged for commercial wording like buy, hire, best, affordable, cheap, top, service, or company.',
 				'The main keyword should be judged as informational or commercial intent.',
-				'The excerpt should be judged for spelling and grammar issues.',
+				'The excerpt should be judged for spelling, grammar, punctuation, formatting artifacts, and obvious capitalization inconsistencies.',
+				'For any failed check, return a short list of concrete issues using newline-separated bullets that begin with "- ".',
 				'Title: ' . $title,
 				'Main keyword: ' . $main_keyword,
 				'Excerpt: ' . $excerpt,
@@ -211,6 +212,46 @@ class AIStrategy extends BlogQA_CheckBase {
 			$this->build_check( '6.1', 'Title is non-commercial', $status, $reason ),
 			$this->build_check( '6.3', 'Main keyword is informational', $status, $reason ),
 			$this->build_check( '6.4', 'Content has no spelling or grammar errors', $status, $reason ),
+		);
+	}
+
+	/**
+	 * Normalize AI reasons so list-style output renders consistently.
+	 */
+	protected function normalize_reason( string $reason ) : string {
+		$reason = trim( preg_replace( "/\r\n?/", "\n", $reason ) ?? $reason );
+
+		if ( '' === $reason ) {
+			return '';
+		}
+
+		if ( false !== strpos( $reason, "\n" ) ) {
+			return $reason;
+		}
+
+		$parts = preg_split( '/;\s+/', $reason );
+
+		if ( ! is_array( $parts ) || count( $parts ) < 2 ) {
+			return $reason;
+		}
+
+		$parts = array_values(
+			array_filter(
+				array_map( 'trim', $parts ),
+				static fn( string $part ) : bool => '' !== $part
+			)
+		);
+
+		if ( count( $parts ) < 2 ) {
+			return $reason;
+		}
+
+		return implode(
+			"\n",
+			array_map(
+				static fn( string $part ) : string => '- ' . ltrim( $part, "- \t" ),
+				array_slice( $parts, 0, 4 )
+			)
 		);
 	}
 

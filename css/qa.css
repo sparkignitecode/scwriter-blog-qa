@@ -195,6 +195,7 @@
 .blogqa-check-reason {
 	color: var(--blogqa-muted);
 	margin: 8px 0 0;
+	white-space: pre-line;
 }
 
 .blogqa-meta-box.is-loading .blogqa-results {
