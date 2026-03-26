@@ -3,6 +3,7 @@
 namespace BlogQA\API;
 
 use BlogQA\BlogQA_Checker;
+use BlogQA\BlogQA_PillarPostContext;
 use WP_Error;
 use WP_Post;
 use WP_REST_Request;
@@ -138,6 +139,7 @@ class BlogQA_QAEndpoint {
 			array(
 				'results' => $results,
 				'last_run' => (int) get_post_meta( $post_id, '_blog_qa_last_run', true ),
+				'mode' => (string) get_post_meta( $post_id, '_blog_qa_mode', true ),
 			),
 			200
 		);
@@ -267,7 +269,7 @@ class BlogQA_QAEndpoint {
 	protected function get_pillar_post_label( int $post_id ) : string {
 		$post = get_post( $post_id );
 
-		if ( ! $post instanceof WP_Post ) {
+		if ( ! ( $post instanceof WP_Post ) ) {
 			return '';
 		}
 
@@ -281,21 +283,9 @@ class BlogQA_QAEndpoint {
 	}
 
 	/**
-	 * Resolve the final pillar post ID, including legacy URL fallback, before persistence.
+	 * Resolve the final pillar post ID before persistence.
 	 */
 	protected function resolve_effective_pillar_post_id( int $post_id, int $pillar_post_id ) : int {
-		if ( $pillar_post_id > 0 ) {
-			return $pillar_post_id;
-		}
-
-		$legacy_url = trim( (string) get_post_meta( $post_id, '_blog_qa_pillar_post_url', true ) );
-
-		if ( '' === $legacy_url ) {
-			return 0;
-		}
-
-		$legacy_post_id = url_to_postid( $legacy_url );
-
-		return $legacy_post_id > 0 ? $legacy_post_id : 0;
+		return ( new BlogQA_PillarPostContext() )->resolve_selected_post_id( $post_id, $pillar_post_id );
 	}
 }

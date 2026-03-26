@@ -114,6 +114,10 @@ class AIStrategy extends BlogQA_CheckBase {
 	 * Load plugin-local environment config from env.php.
 	 */
 	protected function load_env_file() : void {
+		if ( defined( 'BLOGQA_OPENAI_API_KEY' ) ) {
+			return;
+		}
+
 		$config_path = BLOGQA_PLUGIN_DIR . 'env.php';
 
 		if ( ! file_exists( $config_path ) ) {

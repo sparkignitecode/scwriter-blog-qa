@@ -7,14 +7,37 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Builds the pillar-post context used by section 7 checks.
+ * Builds the pillar-post context used by QA mode selection and section 7 checks.
  */
 class BlogQA_PillarPostContext {
+
+	/**
+	 * Return the validated selected pillar post ID for regular mode or zero for pillar mode.
+	 */
+	public function resolve_selected_post_id( int $post_id, int $pillar_post_id ) : int {
+		if ( $pillar_post_id <= 0 || $pillar_post_id === $post_id ) {
+			return 0;
+		}
+
+		$pillar_post = get_post( $pillar_post_id );
+
+		if ( ! $pillar_post ) {
+			return 0;
+		}
+
+		if ( ! current_user_can( 'read_post', $pillar_post_id ) ) {
+			return 0;
+		}
+
+		return $pillar_post_id;
+	}
 
 	/**
 	 * Build normalized pillar data for a QA run.
 	 *
 	 * @return array{
+	 *     mode: string,
+	 *     selected_pillar_post_id: int,
 	 *     pb_data: array<string, mixed>|null,
 	 *     pb_keywords: array<int, string>,
 	 *     pillar_post_url: string,
@@ -23,35 +46,24 @@ class BlogQA_PillarPostContext {
 	 */
 	public function build( int $post_id, int $pillar_post_id ) : array {
 		$context = array(
+			'mode' => 'pillar',
+			'selected_pillar_post_id' => 0,
 			'pb_data' => null,
 			'pb_keywords' => array(),
 			'pillar_post_url' => '',
 			'skip_reason' => '',
 		);
 
-		if ( $pillar_post_id <= 0 ) {
-			$context['skip_reason'] = __( 'No Pillar Post selected', 'scwriter-blog-qa' );
+		$resolved_pillar_post_id = $this->resolve_selected_post_id( $post_id, $pillar_post_id );
+
+		if ( $resolved_pillar_post_id <= 0 ) {
 			return $context;
 		}
 
-		if ( $pillar_post_id === $post_id ) {
-			$context['skip_reason'] = __( 'Pillar Post cannot match the current post', 'scwriter-blog-qa' );
-			return $context;
-		}
+		$context['mode'] = 'regular';
+		$context['selected_pillar_post_id'] = $resolved_pillar_post_id;
 
-		$pillar_post = get_post( $pillar_post_id );
-
-		if ( ! $pillar_post ) {
-			$context['skip_reason'] = __( 'Pillar Post could not be found', 'scwriter-blog-qa' );
-			return $context;
-		}
-
-		if ( ! current_user_can( 'read_post', $pillar_post_id ) ) {
-			$context['skip_reason'] = __( 'You are not allowed to read the selected Pillar Post', 'scwriter-blog-qa' );
-			return $context;
-		}
-
-		$post_data = ( new BlogQA_PostData( $pillar_post_id ) )->get_data();
+		$post_data = ( new BlogQA_PostData( $resolved_pillar_post_id ) )->get_data();
 		$secondary_keywords = is_array( $post_data['secondary_keywords'] ?? null )
 			? array_values(
 				array_filter(
@@ -74,7 +86,7 @@ class BlogQA_PillarPostContext {
 		);
 		$context['pb_keywords'] = $secondary_keywords;
 
-		$permalink = get_permalink( $pillar_post_id );
+		$permalink = get_permalink( $resolved_pillar_post_id );
 
 		if ( is_string( $permalink ) ) {
 			$context['pillar_post_url'] = $permalink;

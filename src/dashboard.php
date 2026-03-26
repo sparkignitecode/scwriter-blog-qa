@@ -48,14 +48,15 @@ class BlogQA_Dashboard {
 		$pillar_post_id = $this->get_initial_pillar_post_id( $post->ID );
 		$pillar_post_label = $this->get_pillar_post_label( $pillar_post_id );
 		$results = get_post_meta( $post->ID, '_blog_qa_results', true );
-		$last_run = (int) get_post_meta( $post->ID, '_blog_qa_last_run', true );
-		$is_ai_key_configured = '' !== trim( ( new \BlogQA\Checks\AIStrategy() )->get_openai_api_key() );
-
 		if ( ! is_array( $results ) ) {
 			$results = array();
 		}
 
-		$this->localize_script( $post->ID, $location, $pillar_post_id, $pillar_post_label, $results, $last_run );
+		$last_run = (int) get_post_meta( $post->ID, '_blog_qa_last_run', true );
+		$last_run_mode = $this->get_last_run_mode( $post->ID, $pillar_post_id, $results );
+		$is_ai_key_configured = '' !== trim( ( new \BlogQA\Checks\AIStrategy() )->get_openai_api_key() );
+
+		$this->localize_script( $post->ID, $location, $pillar_post_id, $pillar_post_label, $results, $last_run, $last_run_mode );
 
 		$formatted_last_run = $this->format_last_run( $last_run );
 		$score_text = $this->format_score( $results );
@@ -77,7 +78,7 @@ class BlogQA_Dashboard {
 
 		$post = get_post( $post_id );
 
-		if ( ! $post instanceof WP_Post || 'post' !== $post->post_type ) {
+		if ( ! ( $post instanceof WP_Post ) || 'post' !== $post->post_type ) {
 			return;
 		}
 
@@ -135,7 +136,7 @@ class BlogQA_Dashboard {
 	 *
 	 * @param array<int, array<string, mixed>> $results
 	 */
-	protected function localize_script( int $post_id, string $location, int $pillar_post_id, string $pillar_post_label, array $results, int $last_run ) : void {
+	protected function localize_script( int $post_id, string $location, int $pillar_post_id, string $pillar_post_label, array $results, int $last_run, string $last_run_mode ) : void {
 		wp_localize_script(
 			BLOGQA_PREFIX . '-qa',
 			'scwriterBlogQaData',
@@ -149,6 +150,7 @@ class BlogQA_Dashboard {
 				'pillarSearchUrl' => rest_url( 'scwriter-blog-qa/v1/pillar-posts' ),
 				'initialResults' => $results,
 				'lastRun' => $last_run,
+				'lastRunMode' => $last_run_mode,
 				'strings' => array(
 					'run' => __( 'Run QA', 'scwriter-blog-qa' ),
 					'running' => __( 'Running QA...', 'scwriter-blog-qa' ),
@@ -161,6 +163,10 @@ class BlogQA_Dashboard {
 					'pillarSearchEmpty' => __( 'No pillar posts found.', 'scwriter-blog-qa' ),
 					'pillarSearchLoading' => __( 'Searching pillar posts...', 'scwriter-blog-qa' ),
 					'pillarSearchError' => __( 'Could not load pillar posts.', 'scwriter-blog-qa' ),
+					'currentModePillar' => __( 'Leave empty for pillar mode. Select a post for regular mode.', 'scwriter-blog-qa' ),
+					'currentModeRegular' => __( 'Regular mode: comparing this post against the selected pillar post.', 'scwriter-blog-qa' ),
+					'resultsModePillar' => __( 'Last results: Pillar mode', 'scwriter-blog-qa' ),
+					'resultsModeRegular' => __( 'Last results: Regular mode', 'scwriter-blog-qa' ),
 				),
 			)
 		);
@@ -233,8 +239,9 @@ class BlogQA_Dashboard {
 	 */
 	protected function get_initial_pillar_post_id( int $post_id ) : int {
 		$pillar_post_id = (int) get_post_meta( $post_id, '_blog_qa_pillar_post_id', true );
+		$context = new BlogQA_PillarPostContext();
 
-		if ( $pillar_post_id > 0 ) {
+		if ( $context->resolve_selected_post_id( $post_id, $pillar_post_id ) > 0 ) {
 			return $pillar_post_id;
 		}
 
@@ -251,7 +258,7 @@ class BlogQA_Dashboard {
 
 		$pillar_post = get_post( $pillar_post_id );
 
-		if ( ! $pillar_post instanceof WP_Post ) {
+		if ( ! ( $pillar_post instanceof WP_Post ) ) {
 			return '';
 		}
 
@@ -268,6 +275,7 @@ class BlogQA_Dashboard {
 	 * Resolve a saved local URL to the new pillar post ID without writing on render.
 	 */
 	protected function resolve_legacy_pillar_post_id( int $post_id ) : int {
+		$context = new BlogQA_PillarPostContext();
 		$legacy_url = trim( (string) get_post_meta( $post_id, '_blog_qa_pillar_post_url', true ) );
 
 		if ( '' === $legacy_url || ! $this->is_local_site_url( $legacy_url ) ) {
@@ -280,18 +288,14 @@ class BlogQA_Dashboard {
 			return 0;
 		}
 
-		return $pillar_post_id;
+		return $context->resolve_selected_post_id( $post_id, $pillar_post_id );
 	}
 
 	/**
-	 * Resolve the final pillar post ID before save, including legacy URL fallback.
+	 * Resolve the final pillar post ID before save.
 	 */
 	protected function resolve_effective_pillar_post_id( int $post_id, int $pillar_post_id ) : int {
-		if ( $pillar_post_id > 0 ) {
-			return $pillar_post_id;
-		}
-
-		return $this->resolve_legacy_pillar_post_id( $post_id );
+		return ( new BlogQA_PillarPostContext() )->resolve_selected_post_id( $post_id, $pillar_post_id );
 	}
 
 	/**
@@ -314,5 +318,24 @@ class BlogQA_Dashboard {
 		}
 
 		update_post_meta( $post_id, $meta_key, (string) $value );
+	}
+
+	/**
+	 * Resolve the mode label to show for the stored result set.
+	 *
+	 * @param array<int, array<string, mixed>> $results
+	 */
+	protected function get_last_run_mode( int $post_id, int $pillar_post_id, array $results ) : string {
+		$last_run_mode = trim( (string) get_post_meta( $post_id, '_blog_qa_mode', true ) );
+
+		if ( in_array( $last_run_mode, array( 'pillar', 'regular' ), true ) ) {
+			return $last_run_mode;
+		}
+
+		if ( empty( $results ) ) {
+			return $pillar_post_id > 0 ? 'regular' : 'pillar';
+		}
+
+		return $pillar_post_id > 0 ? 'regular' : 'pillar';
 	}
 }

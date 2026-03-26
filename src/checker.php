@@ -9,6 +9,9 @@ use BlogQA\Checks\KeywordPlacement;
 use BlogQA\Checks\Location;
 use BlogQA\Checks\Metadata;
 use BlogQA\Checks\BlogQA_PillarPostChecks;
+use BlogQA\Checks\PillarImages;
+use BlogQA\Checks\PillarInternalLinking;
+use BlogQA\Checks\PillarStructure;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
@@ -33,8 +36,28 @@ class BlogQA_Checker {
 	public function run( int $pillar_post_id = 0 ) : array {
 		$post_data = ( new BlogQA_PostData( $this->post_id ) )->get_data();
 		$pillar_context = ( new BlogQA_PillarPostContext() )->build( $this->post_id, $pillar_post_id );
+		$mode = 'regular' === ( $pillar_context['mode'] ?? '' ) ? 'regular' : 'pillar';
 
-		$results = array(
+		if ( 'regular' === $mode ) {
+			$results = $this->build_regular_mode_results( $post_data, $pillar_context );
+		} else {
+			$results = $this->build_pillar_mode_results( $post_data );
+		}
+
+		$this->persist_results( $mode, $results );
+
+		return $results;
+	}
+
+	/**
+	 * Build the regular-mode section list.
+	 *
+	 * @param array<string, mixed> $post_data
+	 * @param array<string, mixed> $pillar_context
+	 * @return array<int, array<string, mixed>>
+	 */
+	protected function build_regular_mode_results( array $post_data, array $pillar_context ) : array {
+		return array(
 			( new KeywordPlacement() )->run( $post_data ),
 			( new ContentQuality() )->run( $post_data ),
 			( new Metadata() )->run( $post_data ),
@@ -43,16 +66,30 @@ class BlogQA_Checker {
 			$this->build_strategy_section( $post_data ),
 			( new BlogQA_PillarPostChecks() )->run(
 				$post_data,
-				$pillar_context['pb_data'],
-				$pillar_context['pb_keywords'],
-				$pillar_context['pillar_post_url'],
-				$pillar_context['skip_reason']
+				is_array( $pillar_context['pb_data'] ?? null ) ? $pillar_context['pb_data'] : null,
+				is_array( $pillar_context['pb_keywords'] ?? null ) ? $pillar_context['pb_keywords'] : array(),
+				(string) ( $pillar_context['pillar_post_url'] ?? '' ),
+				(string) ( $pillar_context['skip_reason'] ?? '' )
 			),
 		);
+	}
 
-		$this->persist_results( $results );
-
-		return $results;
+	/**
+	 * Build the pillar-mode section list.
+	 *
+	 * @param array<string, mixed> $post_data
+	 * @return array<int, array<string, mixed>>
+	 */
+	protected function build_pillar_mode_results( array $post_data ) : array {
+		return array(
+			( new KeywordPlacement() )->run( $post_data ),
+			( new PillarStructure() )->run( $post_data ),
+			( new Metadata() )->run( $post_data ),
+			( new PillarImages() )->run( $post_data ),
+			( new Location() )->run( $post_data ),
+			$this->build_strategy_section( $post_data ),
+			( new PillarInternalLinking() )->run( $post_data ),
+		);
 	}
 
 	/**
@@ -74,10 +111,12 @@ class BlogQA_Checker {
 	/**
 	 * Persist the latest result payload and timestamp.
 	 *
+	 * @param string $mode
 	 * @param array<int, array<string, mixed>> $results
 	 */
-	protected function persist_results( array $results ) : void {
+	protected function persist_results( string $mode, array $results ) : void {
 		update_post_meta( $this->post_id, '_blog_qa_results', $results );
 		update_post_meta( $this->post_id, '_blog_qa_last_run', time() );
+		update_post_meta( $this->post_id, '_blog_qa_mode', $mode );
 	}
 }

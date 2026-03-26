@@ -70,9 +70,26 @@ class BlogQA_LinkClassifier {
 			return $this->build_classification( false, $this->infer_keyword_from_url( $href ), 0, $request_error, true );
 		}
 
+		$spark_seo_classification = $this->classify_via_spark_seo( $request_url, $href );
+
+		if ( null !== $spark_seo_classification ) {
+			return $spark_seo_classification;
+		}
+
+		return $this->build_classification( false, $this->infer_keyword_from_url( $href ), 0, 'spark_seo response could not be loaded', true );
+	}
+
+	/**
+	 * Classify a URL through the spark_seo JSON endpoint.
+	 *
+	 * @return array<string, mixed>|null
+	 */
+	protected function classify_via_spark_seo( string $request_url, string $href ) : ?array {
+		$spark_seo_url = add_query_arg( 'spark_seo', 'scwriter', $request_url );
+
 		try {
 			$response = wp_safe_remote_get(
-				$request_url,
+				$spark_seo_url,
 				array(
 					'timeout' => 5,
 					'redirection' => 0,
@@ -81,32 +98,49 @@ class BlogQA_LinkClassifier {
 				)
 			);
 		} catch ( \Throwable $exception ) {
-			return $this->build_classification( false, '', 0, $exception->getMessage(), true );
+			return $this->build_classification( false, $this->infer_keyword_from_url( $href ), 0, $exception->getMessage(), true );
 		}
 
 		if ( is_wp_error( $response ) ) {
-			return $this->build_classification( false, '', 0, $response->get_error_message(), true );
+			return $this->build_classification( false, $this->infer_keyword_from_url( $href ), 0, $response->get_error_message(), true );
 		}
 
 		$status_code = (int) wp_remote_retrieve_response_code( $response );
 
 		if ( 200 !== $status_code ) {
-			return $this->build_classification( false, '', $status_code, sprintf( 'HTTP %d', $status_code ), true );
+			return $this->build_classification( false, $this->infer_keyword_from_url( $href ), $status_code, sprintf( 'HTTP %d', $status_code ), true );
 		}
 
-		$body = (string) wp_remote_retrieve_body( $response );
+		$payload = json_decode( (string) wp_remote_retrieve_body( $response ), true );
 
-		if ( '' === $body ) {
-			return $this->build_classification( false, '', 200, 'Empty response body', true );
+		if ( ! is_array( $payload ) || isset( $payload['error'] ) ) {
+			return null;
 		}
 
 		return $this->build_classification(
-			false !== strpos( $body, 'IgniteForm' ),
-			$this->infer_keyword_from_url( $href ),
+			! empty( $payload['is_pp_lp'] ),
+			$this->resolve_inferred_keyword( $href, $payload ),
 			200,
 			'',
 			true
 		);
+	}
+
+	/**
+	 * Resolve the inferred keyword from spark_seo or fall back to the URL slug.
+	 *
+	 * @param array<string, mixed> $payload
+	 */
+	protected function resolve_inferred_keyword( string $href, array $payload ) : string {
+		$main_keyword = isset( $payload['main_keyword'] ) && is_scalar( $payload['main_keyword'] )
+			? trim( sanitize_text_field( (string) $payload['main_keyword'] ) )
+			: '';
+
+		if ( '' !== $main_keyword ) {
+			return $main_keyword;
+		}
+
+		return $this->infer_keyword_from_url( $href );
 	}
 
 	/**

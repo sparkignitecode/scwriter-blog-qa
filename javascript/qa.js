@@ -178,11 +178,12 @@
 		var pillarPostIdInput = document.getElementById("blogqa-pillar-post-id");
 		var pillarPostLabelInput = document.getElementById("blogqa-pillar-post-label");
 		var pillarPostResults = document.getElementById("blogqa-pillar-post-results");
-		var pillarPostClearButton = document.getElementById("blogqa-pillar-post-clear");
+		var pillarModeNode = document.getElementById("blogqa-pillar-mode");
 		var runButton = document.getElementById("blogqa-run-button");
 		var spinner = document.getElementById("blogqa-spinner");
 		var scoreNode = document.getElementById("blogqa-score");
 		var lastRunNode = document.getElementById("blogqa-last-run");
+		var resultsModeNode = document.getElementById("blogqa-results-mode");
 		var resultsNode = document.getElementById("blogqa-results");
 		var errorNode = document.getElementById("blogqa-error");
 
@@ -198,9 +199,62 @@
 			scoreNode.textContent = strings.scoreEmpty || "No results yet";
 		}
 
+		function getCurrentMode() {
+			return getTrimmedValue(pillarPostIdInput) ? "regular" : "pillar";
+		}
+
+		function syncPillarSelectionState() {
+			if (!pillarPostIdInput || !pillarPostLabelInput) {
+				return;
+			}
+
+			if (!getTrimmedValue(pillarPostLabelInput)) {
+				pillarPostIdInput.value = "";
+				pillarPostLabelInput.dataset.selectedLabel = "";
+			}
+		}
+
+		function getModeText(mode, textType) {
+			if (textType === "results") {
+				return mode === "regular"
+					? strings.resultsModeRegular || "Last results: Regular mode"
+					: strings.resultsModePillar || "Last results: Pillar mode";
+			}
+
+			return mode === "regular"
+				? strings.currentModeRegular ||
+						"Current selection: regular mode. The selected Pillar Post will be used for cross-post comparisons."
+				: strings.currentModePillar ||
+						"Current selection: pillar mode. With no selected Pillar Post, this post is evaluated as the pillar post.";
+		}
+
+		function updateCurrentModeText() {
+			syncPillarSelectionState();
+
+			if (!pillarModeNode) {
+				return;
+			}
+
+			pillarModeNode.textContent = getModeText(getCurrentMode(), "current");
+		}
+
+		function updateResultsModeText(mode, hasResults) {
+			if (!resultsModeNode) {
+				return;
+			}
+
+			if (!hasResults) {
+				resultsModeNode.textContent = "";
+				return;
+			}
+
+			resultsModeNode.textContent = getModeText(mode === "regular" ? "regular" : "pillar", "results");
+		}
+
 		function renderResults(results) {
 			if (!Array.isArray(results) || !results.length) {
 				renderEmptyState();
+				updateResultsModeText(getCurrentMode(), false);
 				return;
 			}
 
@@ -303,16 +357,6 @@
 			pillarPostResults.innerHTML = "";
 		}
 
-		function togglePillarClearButton() {
-			if (!pillarPostClearButton) {
-				return;
-			}
-
-			pillarPostClearButton.hidden =
-				getTrimmedValue(pillarPostLabelInput) === "" &&
-				getTrimmedValue(pillarPostIdInput) === "";
-		}
-
 		function setPillarSelection(post) {
 			if (pillarPostIdInput) {
 				pillarPostIdInput.value =
@@ -326,8 +370,8 @@
 					post && typeof post.label === "string" ? post.label : "";
 			}
 
-			togglePillarClearButton();
 			hidePillarResults();
+			updateCurrentModeText();
 		}
 
 		function renderPillarResults(items, state) {
@@ -435,7 +479,8 @@
 				pillarPostIdInput.value = "";
 			}
 
-			togglePillarClearButton();
+			syncPillarSelectionState();
+			updateCurrentModeText();
 			searchPillarPosts(getTrimmedValue(pillarPostLabelInput));
 		}
 
@@ -466,9 +511,14 @@
 				strings.pillarSearchPlaceholder || "Search pillar posts";
 		}
 
-		togglePillarClearButton();
+		syncPillarSelectionState();
+		updateCurrentModeText();
 		renderResults(Array.isArray(data.initialResults) ? data.initialResults : []);
 		lastRunNode.textContent = formatLastRun(data.lastRun, strings);
+		updateResultsModeText(
+			typeof data.lastRunMode === "string" ? data.lastRunMode : getCurrentMode(),
+			Array.isArray(data.initialResults) && data.initialResults.length > 0
+		);
 
 		if (pillarPostLabelInput) {
 			pillarPostLabelInput.addEventListener("input", handlePillarInput);
@@ -477,16 +527,6 @@
 			});
 			pillarPostLabelInput.addEventListener("blur", function () {
 				window.setTimeout(hidePillarResults, 150);
-			});
-		}
-
-		if (pillarPostClearButton) {
-			pillarPostClearButton.addEventListener("click", function () {
-				setPillarSelection(null);
-
-				if (pillarPostLabelInput) {
-					pillarPostLabelInput.focus();
-				}
 			});
 		}
 
@@ -563,9 +603,14 @@
 					var lastRun = payload && payload.last_run
 						? Number(payload.last_run)
 						: Math.floor(Date.now() / 1000);
+					var mode =
+						payload && typeof payload.mode === "string" && payload.mode
+							? payload.mode
+							: getCurrentMode();
 
 					renderResults(results);
 					lastRunNode.textContent = formatLastRun(lastRun, strings);
+					updateResultsModeText(mode, results.length > 0);
 				})
 				.catch(function (error) {
 					setError(

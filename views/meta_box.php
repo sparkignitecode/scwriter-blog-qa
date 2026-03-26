@@ -59,16 +59,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 				/>
 			</div>
 			<div id="blogqa-pillar-post-results" class="blogqa-autocomplete" hidden></div>
-			<p class="description">
-				<?php esc_html_e( 'Search for a post on this site. Pillar SEO data and keywords will be loaded from the selected post.', 'scwriter-blog-qa' ); ?>
-			</p>
+			<p id="blogqa-pillar-mode" class="description" aria-live="polite"></p>
 		</div>
 
 		<div class="blogqa-actions">
-			<button type="button" class="button button-primary" id="blogqa-run-button">
-				<?php esc_html_e( 'Run QA', 'scwriter-blog-qa' ); ?>
-			</button>
-			<span id="blogqa-spinner" class="spinner blogqa-spinner" aria-hidden="true"></span>
+			<span class="blogqa-label blogqa-label-placeholder" aria-hidden="true">&nbsp;</span>
+			<div class="blogqa-action-row">
+				<button type="button" class="button button-primary" id="blogqa-run-button">
+					<?php esc_html_e( 'Run QA', 'scwriter-blog-qa' ); ?>
+				</button>
+				<span id="blogqa-spinner" class="spinner blogqa-spinner" aria-hidden="true"></span>
+			</div>
 		</div>
 	</div>
 
@@ -79,6 +80,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<div id="blogqa-last-run" class="blogqa-last-run" aria-live="polite">
 			<?php echo esc_html( $formatted_last_run ); ?>
 		</div>
+		<?php if ( ! empty( $results ) ) : ?>
+			<div id="blogqa-results-mode" class="blogqa-last-run" aria-live="polite"></div>
+		<?php endif; ?>
 	</div>
 
 	<?php if ( ! $is_ai_key_configured ) : ?>

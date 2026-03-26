@@ -114,12 +114,23 @@
 }
 
 .blogqa-actions {
-	align-items: center;
+	align-items: flex-start;
 	align-self: flex-start;
 	display: flex;
+	flex-direction: column;
 	flex: 0 0 auto;
+	gap: 6px;
+	padding-top: 0;
+}
+
+.blogqa-label-placeholder {
+	visibility: hidden;
+}
+
+.blogqa-action-row {
+	align-items: center;
+	display: flex;
 	gap: 8px;
-	margin-top: 25px;
 }
 
 .blogqa-spinner {

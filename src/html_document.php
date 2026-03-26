@@ -100,7 +100,7 @@ class BlogQA_HtmlDocument {
 		$images = array();
 
 		foreach ( $nodes as $node ) {
-			if ( ! $node instanceof \DOMElement ) {
+			if ( ! ( $node instanceof \DOMElement ) ) {
 				continue;
 			}
 
@@ -129,7 +129,7 @@ class BlogQA_HtmlDocument {
 		$links = array();
 
 		foreach ( $nodes as $node ) {
-			if ( ! $node instanceof \DOMElement ) {
+			if ( ! ( $node instanceof \DOMElement ) ) {
 				continue;
 			}
 
