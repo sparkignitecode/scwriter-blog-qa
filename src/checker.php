@@ -5,7 +5,6 @@ namespace BlogQA;
 use BlogQA\Checks\AIStrategy;
 use BlogQA\Checks\ContentQuality;
 use BlogQA\Checks\Images;
-use BlogQA\Checks\KeywordCluster;
 use BlogQA\Checks\KeywordPlacement;
 use BlogQA\Checks\Location;
 use BlogQA\Checks\Metadata;
@@ -29,11 +28,11 @@ class BlogQA_Checker {
 	/**
 	 * Run all checks and persist the latest result set.
 	 *
-	 * @param array<string, string>|null $pb_data
 	 * @return array<int, array<string, mixed>>
 	 */
-	public function run( ?array $pb_data = null, string $pb_secondary_keywords = '', string $pillar_post_url = '' ) : array {
+	public function run( int $pillar_post_id = 0 ) : array {
 		$post_data = ( new BlogQA_PostData( $this->post_id ) )->get_data();
+		$pillar_context = ( new BlogQA_PillarPostContext() )->build( $this->post_id, $pillar_post_id );
 
 		$results = array(
 			( new KeywordPlacement() )->run( $post_data ),
@@ -42,7 +41,13 @@ class BlogQA_Checker {
 			( new Images() )->run( $post_data ),
 			( new Location() )->run( $post_data ),
 			$this->build_strategy_section( $post_data ),
-			( new BlogQA_PillarPostChecks() )->run( $post_data, $pb_data, $pb_secondary_keywords, $pillar_post_url ),
+			( new BlogQA_PillarPostChecks() )->run(
+				$post_data,
+				$pillar_context['pb_data'],
+				$pillar_context['pb_keywords'],
+				$pillar_context['pillar_post_url'],
+				$pillar_context['skip_reason']
+			),
 		);
 
 		$this->persist_results( $results );
@@ -57,12 +62,7 @@ class BlogQA_Checker {
 	 * @return array<string, mixed>
 	 */
 	protected function build_strategy_section( array $post_data ) : array {
-		$checks = array_merge(
-			array(
-				( new KeywordCluster() )->run( $post_data ),
-			),
-			( new AIStrategy() )->run( $post_data )
-		);
+		$checks = ( new AIStrategy() )->run( $post_data );
 
 		return array(
 			'section' => '6',

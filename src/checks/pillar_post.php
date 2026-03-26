@@ -18,25 +18,25 @@ class BlogQA_PillarPostChecks extends BlogQA_CheckBase {
 	 * Run section 7 checks.
 	 *
 	 * @param array<string, mixed> $post_data
-	 * @param array<string, string>|null $pb_data
+	 * @param array<string, mixed>|null $pb_data
+	 * @param array<int, string> $pb_keywords
 	 * @return array<string, mixed>
 	 */
-	public function run( array $post_data, ?array $pb_data = null, string $pb_secondary_keywords = '', string $pillar_post_url = '' ) : array {
+	public function run( array $post_data, ?array $pb_data = null, array $pb_keywords = array(), string $pillar_post_url = '', string $pb_skip_reason = '' ) : array {
 		$document = new BlogQA_HtmlDocument( (string) ( $post_data['content'] ?? '' ) );
 		$links = $document->get_links();
 		$classifications = ( new BlogQA_LinkClassifier( $links ) )->classify();
-		$pb_keywords = $this->parse_keyword_list( $pb_secondary_keywords );
 
 		return $this->build_section(
 			'7',
 			'Pillar Post',
 			array(
-				$this->check_main_keyword_difference( $post_data, $pb_data, $pillar_post_url ),
-				$this->check_secondary_keyword_overlap( $post_data, $pb_data, $pb_keywords, $pillar_post_url ),
-				$this->check_intent_overlap( $post_data, $pb_data, $pillar_post_url ),
-				$this->check_image_overlap( $post_data, $pb_data, $pillar_post_url ),
-				$this->check_link_to_pillar_post( $links, $pillar_post_url, $pb_data ),
-				$this->check_pillar_post_anchor_text( $links, $pb_data, $pb_keywords, $pillar_post_url ),
+				$this->check_main_keyword_difference( $post_data, $pb_data, $pb_skip_reason ),
+				$this->check_secondary_keyword_overlap( $post_data, $pb_data, $pb_keywords, $pb_skip_reason ),
+				$this->check_intent_overlap( $post_data, $pb_data, $pb_skip_reason ),
+				$this->check_image_overlap( $post_data, $pb_data, $pb_skip_reason ),
+				$this->check_link_to_pillar_post( $links, $pillar_post_url, $pb_data, $pb_skip_reason ),
+				$this->check_pillar_post_anchor_text( $links, $pb_data, $pb_keywords, $pillar_post_url, $pb_skip_reason ),
 				$this->check_pp_lp_link_presence( $links, $classifications ),
 				$this->check_pp_lp_anchor_keywords( $links, $classifications ),
 				$this->check_link_http_status( $classifications ),
@@ -50,11 +50,11 @@ class BlogQA_PillarPostChecks extends BlogQA_CheckBase {
 	 * Check 7.1a.
 	 *
 	 * @param array<string, mixed> $post_data
-	 * @param array<string, string>|null $pb_data
+	 * @param array<string, mixed>|null $pb_data
 	 * @return array<string, string>
 	 */
-	protected function check_main_keyword_difference( array $post_data, ?array $pb_data, string $pillar_post_url ) : array {
-		$skip_reason = $this->get_pb_dependency_skip_reason( $pillar_post_url, $pb_data );
+	protected function check_main_keyword_difference( array $post_data, ?array $pb_data, string $pb_skip_reason ) : array {
+		$skip_reason = $this->get_pb_dependency_skip_reason( $pb_data, $pb_skip_reason );
 
 		if ( '' !== $skip_reason ) {
 			return $this->build_check( '7.1a', 'SB main keyword differs from PB main keyword', 'skipped', $skip_reason );
@@ -78,12 +78,12 @@ class BlogQA_PillarPostChecks extends BlogQA_CheckBase {
 	 * Check 7.1b.
 	 *
 	 * @param array<string, mixed> $post_data
-	 * @param array<string, string>|null $pb_data
+	 * @param array<string, mixed>|null $pb_data
 	 * @param array<int, string> $pb_keywords
 	 * @return array<string, string>
 	 */
-	protected function check_secondary_keyword_overlap( array $post_data, ?array $pb_data, array $pb_keywords, string $pillar_post_url ) : array {
-		$skip_reason = $this->get_pb_dependency_skip_reason( $pillar_post_url, $pb_data );
+	protected function check_secondary_keyword_overlap( array $post_data, ?array $pb_data, array $pb_keywords, string $pb_skip_reason ) : array {
+		$skip_reason = $this->get_pb_dependency_skip_reason( $pb_data, $pb_skip_reason );
 
 		if ( '' !== $skip_reason ) {
 			return $this->build_check( '7.1b', 'SB main keyword is not used in PB secondary keywords', 'skipped', $skip_reason );
@@ -117,11 +117,11 @@ class BlogQA_PillarPostChecks extends BlogQA_CheckBase {
 	 * Check 7.1c.
 	 *
 	 * @param array<string, mixed> $post_data
-	 * @param array<string, string>|null $pb_data
+	 * @param array<string, mixed>|null $pb_data
 	 * @return array<string, string>
 	 */
-	protected function check_intent_overlap( array $post_data, ?array $pb_data, string $pillar_post_url ) : array {
-		$skip_reason = $this->get_pb_dependency_skip_reason( $pillar_post_url, $pb_data );
+	protected function check_intent_overlap( array $post_data, ?array $pb_data, string $pb_skip_reason ) : array {
+		$skip_reason = $this->get_pb_dependency_skip_reason( $pb_data, $pb_skip_reason );
 
 		if ( '' !== $skip_reason ) {
 			return $this->build_check( '7.1c', 'Search intent overlap is acceptable', 'skipped', $skip_reason );
@@ -211,38 +211,79 @@ class BlogQA_PillarPostChecks extends BlogQA_CheckBase {
 	 * Check 7.2.
 	 *
 	 * @param array<string, mixed> $post_data
-	 * @param array<string, string>|null $pb_data
+	 * @param array<string, mixed>|null $pb_data
 	 * @return array<string, string>
 	 */
-	protected function check_image_overlap( array $post_data, ?array $pb_data, string $pillar_post_url ) : array {
-		$skip_reason = $this->get_pb_dependency_skip_reason( $pillar_post_url, $pb_data );
+	protected function check_image_overlap( array $post_data, ?array $pb_data, string $pb_skip_reason ) : array {
+		$skip_reason = $this->get_pb_dependency_skip_reason( $pb_data, $pb_skip_reason );
 
 		if ( '' !== $skip_reason ) {
 			return $this->build_check( '7.2', 'SB and PB use different images', 'skipped', $skip_reason );
 		}
 
-		$sb_images = $this->extract_image_sources(
+		$sb_images = $this->collect_image_signatures(
+			(int) ( $post_data['featured_image_id'] ?? 0 ),
+			(string) ( $post_data['featured_image_src'] ?? '' ),
 			is_array( $post_data['content_images'] ?? null ) ? $post_data['content_images'] : array()
 		);
-		$pb_images = $this->extract_image_sources(
-			( new BlogQA_HtmlDocument( $this->get_string_value( $pb_data, 'content' ) ) )->get_images()
+		$pb_images = $this->collect_image_signatures(
+			(int) ( $pb_data['featured_image_id'] ?? 0 ),
+			(string) ( $pb_data['featured_image_src'] ?? '' ),
+			is_array( $pb_data['content_images'] ?? null ) ? $pb_data['content_images'] : array()
 		);
 
-		if ( empty( $pb_images ) ) {
+		if ( empty( $pb_images['attachment_ids'] ) && empty( $pb_images['urls'] ) ) {
 			return $this->build_check( '7.2', 'SB and PB use different images', 'skipped', 'PB content contains no images' );
 		}
 
-		$overlapping_images = array_values( array_unique( array_intersect( $sb_images, $pb_images ) ) );
+		$overlapping_attachment_ids = array_values(
+			array_unique(
+				array_intersect( $sb_images['attachment_ids'], $pb_images['attachment_ids'] )
+			)
+		);
+		$overlapping_file_hashes = array_values(
+			array_unique(
+				array_intersect( $sb_images['file_hashes'], $pb_images['file_hashes'] )
+			)
+		);
+		$overlapping_image_urls = array_values(
+			array_unique(
+				array_intersect( $sb_images['urls'], $pb_images['urls'] )
+			)
+		);
 
-		if ( empty( $overlapping_images ) ) {
+		if ( empty( $overlapping_attachment_ids ) && empty( $overlapping_file_hashes ) && empty( $overlapping_image_urls ) ) {
 			return $this->build_check( '7.2', 'SB and PB use different images', 'pass' );
+		}
+
+		$details = array();
+
+		if ( ! empty( $overlapping_attachment_ids ) ) {
+			$details[] = sprintf(
+				'attachment IDs %s',
+				implode( ', ', $overlapping_attachment_ids )
+			);
+		}
+
+		if ( ! empty( $overlapping_file_hashes ) ) {
+			$details[] = sprintf(
+				'local file hashes %s',
+				implode( ', ', $overlapping_file_hashes )
+			);
+		}
+
+		if ( ! empty( $overlapping_image_urls ) ) {
+			$details[] = sprintf(
+				'image URLs %s',
+				implode( ', ', $overlapping_image_urls )
+			);
 		}
 
 		return $this->build_check(
 			'7.2',
 			'SB and PB use different images',
 			'fail',
-			sprintf( 'Shared image sources found: %s.', implode( ', ', $overlapping_images ) )
+			sprintf( 'Shared image sources found via %s.', implode( '; ', $details ) )
 		);
 	}
 
@@ -250,11 +291,11 @@ class BlogQA_PillarPostChecks extends BlogQA_CheckBase {
 	 * Check 7.3a.
 	 *
 	 * @param array<int, array<string, string>> $links
-	 * @param array<string, string>|null $pb_data
+	 * @param array<string, mixed>|null $pb_data
 	 * @return array<string, string>
 	 */
-	protected function check_link_to_pillar_post( array $links, string $pillar_post_url, ?array $pb_data ) : array {
-		$skip_reason = $this->get_pb_dependency_skip_reason( $pillar_post_url, $pb_data );
+	protected function check_link_to_pillar_post( array $links, string $pillar_post_url, ?array $pb_data, string $pb_skip_reason ) : array {
+		$skip_reason = $this->get_pb_link_skip_reason( $pb_data, $pb_skip_reason, $pillar_post_url );
 
 		if ( '' !== $skip_reason ) {
 			return $this->build_check( '7.3a', 'SB links to the Pillar Post', 'skipped', $skip_reason );
@@ -271,12 +312,12 @@ class BlogQA_PillarPostChecks extends BlogQA_CheckBase {
 	 * Check 7.3b.
 	 *
 	 * @param array<int, array<string, string>> $links
-	 * @param array<string, string>|null $pb_data
+	 * @param array<string, mixed>|null $pb_data
 	 * @param array<int, string> $pb_keywords
 	 * @return array<string, string>
 	 */
-	protected function check_pillar_post_anchor_text( array $links, ?array $pb_data, array $pb_keywords, string $pillar_post_url ) : array {
-		$skip_reason = $this->get_pb_dependency_skip_reason( $pillar_post_url, $pb_data );
+	protected function check_pillar_post_anchor_text( array $links, ?array $pb_data, array $pb_keywords, string $pillar_post_url, string $pb_skip_reason ) : array {
+		$skip_reason = $this->get_pb_link_skip_reason( $pb_data, $pb_skip_reason, $pillar_post_url );
 
 		if ( '' !== $skip_reason ) {
 			return $this->build_check( '7.3b', 'SB to PB anchor text contains a PB keyword', 'skipped', $skip_reason );
@@ -511,49 +552,35 @@ class BlogQA_PillarPostChecks extends BlogQA_CheckBase {
 	/**
 	 * Return a skip reason for PB-dependent checks.
 	 *
-	 * @param array<string, string>|null $pb_data
+	 * @param array<string, mixed>|null $pb_data
 	 */
-	protected function get_pb_dependency_skip_reason( string $pillar_post_url, ?array $pb_data ) : string {
-		if ( '' === trim( $pillar_post_url ) ) {
-			return 'No Pillar Post URL provided';
+	protected function get_pb_dependency_skip_reason( ?array $pb_data, string $pb_skip_reason ) : string {
+		if ( '' !== trim( $pb_skip_reason ) ) {
+			return $pb_skip_reason;
 		}
 
 		if ( null === $pb_data ) {
-			return 'Could not fetch Pillar Post data';
+			return 'Could not load Pillar Post data';
 		}
 
 		return '';
 	}
 
 	/**
-	 * Return a normalized keyword list from textarea input.
-	 *
-	 * @return array<int, string>
+	 * Return a skip reason for PB-dependent link checks.
 	 */
-	protected function parse_keyword_list( string $keywords ) : array {
-		if ( '' === trim( $keywords ) ) {
-			return array();
+	protected function get_pb_link_skip_reason( ?array $pb_data, string $pb_skip_reason, string $pillar_post_url ) : string {
+		$skip_reason = $this->get_pb_dependency_skip_reason( $pb_data, $pb_skip_reason );
+
+		if ( '' !== $skip_reason ) {
+			return $skip_reason;
 		}
 
-		$items = preg_split( '/[\r\n,]+/', $keywords );
-
-		if ( ! is_array( $items ) ) {
-			return array();
+		if ( '' === trim( $pillar_post_url ) ) {
+			return 'Pillar Post permalink is unavailable';
 		}
 
-		$normalized_keywords = array();
-
-		foreach ( $items as $item ) {
-			$keyword = trim( sanitize_text_field( (string) $item ) );
-
-			if ( '' === $keyword || in_array( $keyword, $normalized_keywords, true ) ) {
-				continue;
-			}
-
-			$normalized_keywords[] = $keyword;
-		}
-
-		return $normalized_keywords;
+		return '';
 	}
 
 	/**
@@ -642,25 +669,123 @@ class BlogQA_PillarPostChecks extends BlogQA_CheckBase {
 	}
 
 	/**
-	 * Return normalized image source URLs.
+	 * Return comparable image signatures.
 	 *
-	 * @param array<int, array<string, string>> $images
-	 * @return array<int, string>
+	 * @param array<int, array<string, int|string>> $images
+	 * @return array{attachment_ids: array<int, int>, file_hashes: array<int, string>, urls: array<int, string>}
 	 */
-	protected function extract_image_sources( array $images ) : array {
-		$sources = array();
+	protected function collect_image_signatures( int $featured_image_id, string $featured_image_src, array $images ) : array {
+		$attachment_ids = array();
+		$file_hashes = array();
+		$urls = array();
+
+		if ( $featured_image_id > 0 ) {
+			$attachment_ids[] = $featured_image_id;
+		} elseif ( '' !== trim( $featured_image_src ) ) {
+			$this->add_url_image_signature( $featured_image_src, $attachment_ids, $file_hashes, $urls );
+		}
 
 		foreach ( $images as $image ) {
-			$src = trim( (string) ( $image['src'] ?? '' ) );
+			$attachment_id = (int) ( $image['attachment_id'] ?? 0 );
 
-			if ( '' === $src || in_array( $src, $sources, true ) ) {
+			if ( $attachment_id > 0 ) {
+				$attachment_ids[] = $attachment_id;
 				continue;
 			}
 
-			$sources[] = $src;
+			$this->add_url_image_signature( (string) ( $image['src'] ?? '' ), $attachment_ids, $file_hashes, $urls );
 		}
 
-		return $sources;
+		return array(
+			'attachment_ids' => array_values( array_unique( array_map( 'intval', $attachment_ids ) ) ),
+			'file_hashes' => array_values( array_unique( $file_hashes ) ),
+			'urls' => array_values( array_unique( $urls ) ),
+		);
+	}
+
+	/**
+	 * Add the strongest available signature for an image URL.
+	 *
+	 * @param array<int, int> $attachment_ids
+	 * @param array<int, string> $file_hashes
+	 * @param array<int, string> $urls
+	 */
+	protected function add_url_image_signature( string $src, array &$attachment_ids, array &$file_hashes, array &$urls ) : void {
+		$normalized_src = $this->normalize_url_for_comparison( $src );
+
+		if ( '' === $normalized_src ) {
+			return;
+		}
+
+		$attachment_id = (int) attachment_url_to_postid( $normalized_src );
+
+		if ( $attachment_id > 0 ) {
+			$attachment_ids[] = $attachment_id;
+			return;
+		}
+
+		$file_hash = $this->get_local_file_hash_for_url( $normalized_src );
+
+		if ( '' !== $file_hash ) {
+			$file_hashes[] = $file_hash;
+			return;
+		}
+
+		$urls[] = $normalized_src;
+	}
+
+	/**
+	 * Return a checksum for a local uploads image URL when it maps to a readable file.
+	 */
+	protected function get_local_file_hash_for_url( string $url ) : string {
+		$file_path = $this->resolve_local_upload_path_from_url( $url );
+
+		if ( '' === $file_path || ! is_readable( $file_path ) ) {
+			return '';
+		}
+
+		$hash = md5_file( $file_path );
+
+		return is_string( $hash ) ? $hash : '';
+	}
+
+	/**
+	 * Resolve a local uploads URL to an absolute file path.
+	 */
+	protected function resolve_local_upload_path_from_url( string $url ) : string {
+		$uploads = wp_get_upload_dir();
+		$base_url = isset( $uploads['baseurl'] ) ? (string) $uploads['baseurl'] : '';
+		$base_dir = isset( $uploads['basedir'] ) ? (string) $uploads['basedir'] : '';
+
+		if ( '' === $base_url || '' === $base_dir ) {
+			return '';
+		}
+
+		$normalized_base_url = $this->normalize_url_for_comparison( $base_url );
+		$normalized_url = $this->normalize_url_for_comparison( $url );
+
+		if ( '' === $normalized_base_url || '' === $normalized_url ) {
+			return '';
+		}
+
+		if ( ! str_starts_with( $normalized_url, $normalized_base_url . '/' ) && $normalized_url !== $normalized_base_url ) {
+			return '';
+		}
+
+		$relative_path = ltrim( substr( $normalized_url, strlen( $normalized_base_url ) ), '/' );
+
+		if ( '' === $relative_path ) {
+			return '';
+		}
+
+		$file_path = wp_normalize_path( trailingslashit( $base_dir ) . $relative_path );
+		$base_dir_path = trailingslashit( wp_normalize_path( $base_dir ) );
+
+		if ( ! str_starts_with( $file_path, $base_dir_path ) ) {
+			return '';
+		}
+
+		return $file_path;
 	}
 
 	/**
@@ -745,7 +870,7 @@ class BlogQA_PillarPostChecks extends BlogQA_CheckBase {
 	/**
 	 * Return a scalar value from PB data.
 	 *
-	 * @param array<string, string>|null $pb_data
+	 * @param array<string, mixed>|null $pb_data
 	 */
 	protected function get_string_value( ?array $pb_data, string $key ) : string {
 		if ( ! is_array( $pb_data ) ) {

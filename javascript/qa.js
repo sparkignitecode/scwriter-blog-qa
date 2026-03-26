@@ -157,14 +157,28 @@
 		return getTrimmedValue(locationInput);
 	}
 
+	function debounce(callback, delay) {
+		var timeoutId = 0;
+
+		return function () {
+			var args = arguments;
+
+			window.clearTimeout(timeoutId);
+			timeoutId = window.setTimeout(function () {
+				callback.apply(null, args);
+			}, delay);
+		};
+	}
+
 	onReady(function () {
 		var data = window.scwriterBlogQaData || {};
 		var strings = data.strings || {};
 		var root = document.getElementById("blogqa-meta-box");
 		var locationInput = document.getElementById("blogqa-location");
-		var pillarPostUrlInput = document.getElementById("blogqa-pillar-post-url");
-		var pbSecondaryKeywordsField = document.getElementById("blogqa-pb-secondary-keywords-field");
-		var pbSecondaryKeywordsInput = document.getElementById("blogqa-pb-secondary-keywords");
+		var pillarPostIdInput = document.getElementById("blogqa-pillar-post-id");
+		var pillarPostLabelInput = document.getElementById("blogqa-pillar-post-label");
+		var pillarPostResults = document.getElementById("blogqa-pillar-post-results");
+		var pillarPostClearButton = document.getElementById("blogqa-pillar-post-clear");
 		var runButton = document.getElementById("blogqa-run-button");
 		var spinner = document.getElementById("blogqa-spinner");
 		var scoreNode = document.getElementById("blogqa-score");
@@ -280,37 +294,215 @@
 			errorNode.textContent = "";
 		}
 
-		function togglePbSecondaryKeywords() {
-			if (!pbSecondaryKeywordsField) {
+		function hidePillarResults() {
+			if (!pillarPostResults) {
 				return;
 			}
 
-			pbSecondaryKeywordsField.style.display =
-				getTrimmedValue(pillarPostUrlInput) !== "" ? "" : "none";
+			pillarPostResults.hidden = true;
+			pillarPostResults.innerHTML = "";
+		}
+
+		function togglePillarClearButton() {
+			if (!pillarPostClearButton) {
+				return;
+			}
+
+			pillarPostClearButton.hidden =
+				getTrimmedValue(pillarPostLabelInput) === "" &&
+				getTrimmedValue(pillarPostIdInput) === "";
+		}
+
+		function setPillarSelection(post) {
+			if (pillarPostIdInput) {
+				pillarPostIdInput.value =
+					post && typeof post.id !== "undefined" ? String(post.id) : "";
+			}
+
+			if (pillarPostLabelInput) {
+				pillarPostLabelInput.value =
+					post && typeof post.label === "string" ? post.label : "";
+				pillarPostLabelInput.dataset.selectedLabel =
+					post && typeof post.label === "string" ? post.label : "";
+			}
+
+			togglePillarClearButton();
+			hidePillarResults();
+		}
+
+		function renderPillarResults(items, state) {
+			if (!pillarPostResults) {
+				return;
+			}
+
+			if (state === "loading") {
+				pillarPostResults.innerHTML =
+					'<div class="blogqa-autocomplete-status">' +
+					escapeHtml(
+						strings.pillarSearchLoading || "Searching pillar posts..."
+					) +
+					"</div>";
+				pillarPostResults.hidden = false;
+				return;
+			}
+
+			if (state === "error") {
+				pillarPostResults.innerHTML =
+					'<div class="blogqa-autocomplete-status">' +
+					escapeHtml(
+						strings.pillarSearchError || "Could not load pillar posts."
+					) +
+					"</div>";
+				pillarPostResults.hidden = false;
+				return;
+			}
+
+			if (!Array.isArray(items) || !items.length) {
+				pillarPostResults.innerHTML =
+					'<div class="blogqa-autocomplete-status">' +
+					escapeHtml(strings.pillarSearchEmpty || "No pillar posts found.") +
+					"</div>";
+				pillarPostResults.hidden = false;
+				return;
+			}
+
+			pillarPostResults.innerHTML = items
+				.map(function (item) {
+					return (
+						'<button type="button" class="blogqa-autocomplete-option" data-id="' +
+						escapeHtml(item.id) +
+						'" data-label="' +
+						escapeHtml(item.label || "") +
+						'">' +
+						escapeHtml(item.label || "") +
+						"</button>"
+					);
+				})
+				.join("");
+			pillarPostResults.hidden = false;
+		}
+
+		var searchPillarPosts = debounce(function (searchTerm) {
+			if (!data.pillarSearchUrl || !pillarPostLabelInput) {
+				return;
+			}
+
+			renderPillarResults([], "loading");
+
+			var searchUrl = new URL(data.pillarSearchUrl, window.location.origin);
+			searchUrl.searchParams.set("search", searchTerm);
+			searchUrl.searchParams.set("exclude_post_id", String(data.postId || 0));
+
+			fetch(searchUrl.toString(), {
+				method: "GET",
+				credentials: "same-origin",
+				headers: {
+					"X-WP-Nonce": data.nonce || "",
+				},
+			})
+				.then(function (response) {
+					return response
+						.json()
+						.catch(function () {
+							return null;
+						})
+						.then(function (payload) {
+							if (!response.ok) {
+								throw new Error(extractErrorMessage(payload, response));
+							}
+
+							return payload;
+						});
+				})
+				.then(function (payload) {
+					renderPillarResults(Array.isArray(payload) ? payload : []);
+				})
+				.catch(function () {
+					renderPillarResults([], "error");
+				});
+		}, 250);
+
+		function handlePillarInput() {
+			if (!pillarPostLabelInput) {
+				return;
+			}
+
+			if (
+				pillarPostLabelInput.dataset.selectedLabel &&
+				pillarPostLabelInput.dataset.selectedLabel !== pillarPostLabelInput.value &&
+				pillarPostIdInput
+			) {
+				pillarPostIdInput.value = "";
+			}
+
+			togglePillarClearButton();
+			searchPillarPosts(getTrimmedValue(pillarPostLabelInput));
 		}
 
 		if (locationInput && data.location && !locationInput.value) {
 			locationInput.value = String(data.location);
 		}
 
-		if (pillarPostUrlInput && data.pillarPostUrl && !pillarPostUrlInput.value) {
-			pillarPostUrlInput.value = String(data.pillarPostUrl);
+		if (
+			pillarPostIdInput &&
+			data.pillarPostId &&
+			!pillarPostIdInput.value
+		) {
+			pillarPostIdInput.value = String(data.pillarPostId);
 		}
 
 		if (
-			pbSecondaryKeywordsInput &&
-			data.pbSecondaryKeywords &&
-			!pbSecondaryKeywordsInput.value
+			pillarPostLabelInput &&
+			data.pillarPostLabel &&
+			!pillarPostLabelInput.value
 		) {
-			pbSecondaryKeywordsInput.value = String(data.pbSecondaryKeywords);
+			pillarPostLabelInput.value = String(data.pillarPostLabel);
 		}
 
-		togglePbSecondaryKeywords();
+		if (pillarPostLabelInput) {
+			pillarPostLabelInput.dataset.selectedLabel =
+				typeof data.pillarPostLabel === "string" ? data.pillarPostLabel : "";
+			pillarPostLabelInput.placeholder =
+				strings.pillarSearchPlaceholder || "Search pillar posts";
+		}
+
+		togglePillarClearButton();
 		renderResults(Array.isArray(data.initialResults) ? data.initialResults : []);
 		lastRunNode.textContent = formatLastRun(data.lastRun, strings);
 
-		if (pillarPostUrlInput) {
-			pillarPostUrlInput.addEventListener("input", togglePbSecondaryKeywords);
+		if (pillarPostLabelInput) {
+			pillarPostLabelInput.addEventListener("input", handlePillarInput);
+			pillarPostLabelInput.addEventListener("focus", function () {
+				searchPillarPosts(getTrimmedValue(pillarPostLabelInput));
+			});
+			pillarPostLabelInput.addEventListener("blur", function () {
+				window.setTimeout(hidePillarResults, 150);
+			});
+		}
+
+		if (pillarPostClearButton) {
+			pillarPostClearButton.addEventListener("click", function () {
+				setPillarSelection(null);
+
+				if (pillarPostLabelInput) {
+					pillarPostLabelInput.focus();
+				}
+			});
+		}
+
+		if (pillarPostResults) {
+			pillarPostResults.addEventListener("click", function (event) {
+				var option = event.target.closest(".blogqa-autocomplete-option");
+
+				if (!option) {
+					return;
+				}
+
+				setPillarSelection({
+					id: option.getAttribute("data-id") || "",
+					label: option.getAttribute("data-label") || "",
+				});
+			});
 		}
 
 		runButton.addEventListener("click", function () {
@@ -334,12 +526,7 @@
 			clearError();
 			setLoading(true);
 
-			var pillarPostUrlValue = getTrimmedValue(pillarPostUrlInput);
-			var pbSecondaryKeywordsValue =
-				pbSecondaryKeywordsInput &&
-				typeof pbSecondaryKeywordsInput.value === "string"
-					? pbSecondaryKeywordsInput.value
-					: "";
+			var pillarPostIdValue = getTrimmedValue(pillarPostIdInput);
 
 			fetch(data.restUrl, {
 				method: "POST",
@@ -350,10 +537,7 @@
 				},
 				body: JSON.stringify({
 					location: locationValue,
-					pillar_post_url: pillarPostUrlValue,
-					pb_secondary_keywords: pillarPostUrlValue
-						? pbSecondaryKeywordsValue
-						: "",
+					pillar_post_id: pillarPostIdValue,
 				}),
 			})
 				.then(function (response) {

@@ -54,17 +54,30 @@ class BlogQA_LinkClassifier {
 	 * @return array<string, mixed>
 	 */
 	protected function classify_href( string $href ) : array {
+		if ( ! $this->is_remote_fetch_enabled() ) {
+			return $this->build_classification( false, $this->infer_keyword_from_url( $href ), 0, 'Remote link fetching is disabled', true );
+		}
+
 		$request_url = $this->build_request_url( $href );
 
 		if ( '' === $request_url ) {
 			return $this->build_classification( false, '', 0, '', false );
 		}
 
+		$request_error = $this->validate_request_url( $request_url );
+
+		if ( '' !== $request_error ) {
+			return $this->build_classification( false, $this->infer_keyword_from_url( $href ), 0, $request_error, true );
+		}
+
 		try {
-			$response = wp_remote_get(
+			$response = wp_safe_remote_get(
 				$request_url,
 				array(
 					'timeout' => 5,
+					'redirection' => 0,
+					'reject_unsafe_urls' => true,
+					'limit_response_size' => 150000,
 				)
 			);
 		} catch ( \Throwable $exception ) {
@@ -148,6 +161,146 @@ class BlogQA_LinkClassifier {
 		}
 
 		return $sanitized_url;
+	}
+
+	/**
+	 * Return whether outbound link fetching is enabled.
+	 */
+	protected function is_remote_fetch_enabled() : bool {
+		$is_enabled = ! defined( 'BLOGQA_DISABLE_REMOTE_FETCHES' ) || ! BLOGQA_DISABLE_REMOTE_FETCHES;
+
+		/**
+		 * Filter whether Blog QA may fetch remote link targets.
+		 */
+		return (bool) apply_filters( 'blogqa_enable_remote_fetches', $is_enabled );
+	}
+
+	/**
+	 * Validate a request URL against SSRF protections.
+	 */
+	protected function validate_request_url( string $request_url ) : string {
+		$parts = wp_parse_url( $request_url );
+
+		if ( ! is_array( $parts ) ) {
+			return 'Blocked unsafe URL';
+		}
+
+		$host = isset( $parts['host'] ) ? strtolower( (string) $parts['host'] ) : '';
+		$scheme = isset( $parts['scheme'] ) ? strtolower( (string) $parts['scheme'] ) : '';
+		$port = isset( $parts['port'] ) ? (int) $parts['port'] : 0;
+
+		if ( '' === $host || '' === $scheme ) {
+			return 'Blocked unsafe URL';
+		}
+
+		if ( isset( $parts['user'] ) || isset( $parts['pass'] ) ) {
+			return 'Blocked URL with embedded credentials';
+		}
+
+		if ( ! in_array( $scheme, array( 'http', 'https' ), true ) ) {
+			return 'Blocked non-HTTP URL';
+		}
+
+		if ( 0 !== $port && ! in_array( $port, array( 80, 443 ), true ) ) {
+			return sprintf( 'Blocked URL using disallowed port %d', $port );
+		}
+
+		if ( ! $this->is_allowed_host( $host ) ) {
+			return sprintf( 'Blocked URL host %s by allowlist policy', $host );
+		}
+
+		$resolved_ips = $this->resolve_host_ips( $host );
+
+		if ( empty( $resolved_ips ) ) {
+			return sprintf( 'Blocked URL host %s because it could not be resolved safely', $host );
+		}
+
+		foreach ( $resolved_ips as $resolved_ip ) {
+			if ( ! $this->is_public_ip_address( $resolved_ip ) ) {
+				return sprintf( 'Blocked URL host %1$s because it resolves to private or reserved IP %2$s', $host, $resolved_ip );
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * Return whether the URL host is permitted by the configured allowlist.
+	 */
+	protected function is_allowed_host( string $host ) : bool {
+		$allowed_hosts = apply_filters( 'blogqa_link_classifier_allowed_hosts', array() );
+
+		if ( ! is_array( $allowed_hosts ) || empty( $allowed_hosts ) ) {
+			return true;
+		}
+
+		$normalized_host = strtolower( $host );
+
+		foreach ( $allowed_hosts as $allowed_host ) {
+			$allowed_host = strtolower( trim( (string) $allowed_host ) );
+
+			if ( '' === $allowed_host ) {
+				continue;
+			}
+
+			if ( $normalized_host === $allowed_host || str_ends_with( $normalized_host, '.' . $allowed_host ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Resolve all IPv4 and IPv6 addresses for the provided host.
+	 *
+	 * @return array<int, string>
+	 */
+	protected function resolve_host_ips( string $host ) : array {
+		if ( '' === $host ) {
+			return array();
+		}
+
+		if ( false !== filter_var( $host, FILTER_VALIDATE_IP ) ) {
+			return array( $host );
+		}
+
+		$resolved_ips = array();
+
+		if ( function_exists( 'dns_get_record' ) ) {
+			$records = dns_get_record( $host, DNS_A + DNS_AAAA );
+
+			if ( is_array( $records ) ) {
+				foreach ( $records as $record ) {
+					$record_ip = $record['ip'] ?? $record['ipv6'] ?? '';
+
+					if ( is_string( $record_ip ) && '' !== $record_ip ) {
+						$resolved_ips[] = $record_ip;
+					}
+				}
+			}
+		}
+
+		if ( empty( $resolved_ips ) && function_exists( 'gethostbynamel' ) ) {
+			$ipv4_addresses = gethostbynamel( $host );
+
+			if ( is_array( $ipv4_addresses ) ) {
+				$resolved_ips = array_merge( $resolved_ips, $ipv4_addresses );
+			}
+		}
+
+		return array_values( array_unique( array_filter( array_map( 'strval', $resolved_ips ) ) ) );
+	}
+
+	/**
+	 * Return whether an IP address is public and routable.
+	 */
+	protected function is_public_ip_address( string $ip_address ) : bool {
+		return false !== filter_var(
+			$ip_address,
+			FILTER_VALIDATE_IP,
+			FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+		);
 	}
 
 	/**

@@ -45,8 +45,8 @@ class BlogQA_Dashboard {
 		}
 
 		$location = $this->get_initial_location( $post->ID );
-		$pillar_post_url = trim( (string) get_post_meta( $post->ID, '_blog_qa_pillar_post_url', true ) );
-		$pb_secondary_keywords = trim( (string) get_post_meta( $post->ID, '_blog_qa_pb_secondary_keywords', true ) );
+		$pillar_post_id = $this->get_initial_pillar_post_id( $post->ID );
+		$pillar_post_label = $this->get_pillar_post_label( $pillar_post_id );
 		$results = get_post_meta( $post->ID, '_blog_qa_results', true );
 		$last_run = (int) get_post_meta( $post->ID, '_blog_qa_last_run', true );
 		$is_ai_key_configured = '' !== trim( ( new \BlogQA\Checks\AIStrategy() )->get_openai_api_key() );
@@ -55,7 +55,7 @@ class BlogQA_Dashboard {
 			$results = array();
 		}
 
-		$this->localize_script( $post->ID, $location, $pillar_post_url, $pb_secondary_keywords, $results, $last_run );
+		$this->localize_script( $post->ID, $location, $pillar_post_id, $pillar_post_label, $results, $last_run );
 
 		$formatted_last_run = $this->format_last_run( $last_run );
 		$score_text = $this->format_score( $results );
@@ -89,15 +89,14 @@ class BlogQA_Dashboard {
 			return;
 		}
 
-		$pillar_post_url = isset( $_POST['blogqa_pillar_post_url'] )
-			? esc_url_raw( trim( wp_unslash( $_POST['blogqa_pillar_post_url'] ) ) )
-			: '';
-		$pb_secondary_keywords = isset( $_POST['blogqa_pb_secondary_keywords'] )
-			? trim( sanitize_textarea_field( wp_unslash( $_POST['blogqa_pb_secondary_keywords'] ) ) )
-			: '';
+		$pillar_post_id = isset( $_POST['blogqa_pillar_post_id'] )
+			? absint( wp_unslash( $_POST['blogqa_pillar_post_id'] ) )
+			: 0;
+		$pillar_post_id = $this->resolve_effective_pillar_post_id( $post_id, $pillar_post_id );
 
-		$this->update_optional_meta( $post_id, '_blog_qa_pillar_post_url', $pillar_post_url );
-		$this->update_optional_meta( $post_id, '_blog_qa_pb_secondary_keywords', $pb_secondary_keywords );
+		$this->update_optional_int_meta( $post_id, '_blog_qa_pillar_post_id', $pillar_post_id );
+		delete_post_meta( $post_id, '_blog_qa_pillar_post_url' );
+		delete_post_meta( $post_id, '_blog_qa_pb_secondary_keywords' );
 	}
 
 	/**
@@ -134,11 +133,9 @@ class BlogQA_Dashboard {
 	/**
 	 * Pass initial state to the admin script.
 	 *
-	 * @param string $pillar_post_url
-	 * @param string $pb_secondary_keywords
 	 * @param array<int, array<string, mixed>> $results
 	 */
-	protected function localize_script( int $post_id, string $location, string $pillar_post_url, string $pb_secondary_keywords, array $results, int $last_run ) : void {
+	protected function localize_script( int $post_id, string $location, int $pillar_post_id, string $pillar_post_label, array $results, int $last_run ) : void {
 		wp_localize_script(
 			BLOGQA_PREFIX . '-qa',
 			'scwriterBlogQaData',
@@ -147,8 +144,9 @@ class BlogQA_Dashboard {
 				'nonce' => wp_create_nonce( 'wp_rest' ),
 				'postId' => $post_id,
 				'location' => $location,
-				'pillarPostUrl' => $pillar_post_url,
-				'pbSecondaryKeywords' => $pb_secondary_keywords,
+				'pillarPostId' => $pillar_post_id,
+				'pillarPostLabel' => $pillar_post_label,
+				'pillarSearchUrl' => rest_url( 'scwriter-blog-qa/v1/pillar-posts' ),
 				'initialResults' => $results,
 				'lastRun' => $last_run,
 				'strings' => array(
@@ -159,6 +157,10 @@ class BlogQA_Dashboard {
 					'scoreEmpty' => __( 'No results yet', 'scwriter-blog-qa' ),
 					'errorPrefix' => __( 'Unable to run QA:', 'scwriter-blog-qa' ),
 					'locationRequired' => __( 'Location is required to run QA.', 'scwriter-blog-qa' ),
+					'pillarSearchPlaceholder' => __( 'Search pillar posts', 'scwriter-blog-qa' ),
+					'pillarSearchEmpty' => __( 'No pillar posts found.', 'scwriter-blog-qa' ),
+					'pillarSearchLoading' => __( 'Searching pillar posts...', 'scwriter-blog-qa' ),
+					'pillarSearchError' => __( 'Could not load pillar posts.', 'scwriter-blog-qa' ),
 				),
 			)
 		);
@@ -227,14 +229,90 @@ class BlogQA_Dashboard {
 	}
 
 	/**
-	 * Update or delete a meta value depending on whether it is empty.
+	 * Return the stored pillar post ID or a non-persisted legacy URL match for display.
 	 */
-	protected function update_optional_meta( int $post_id, string $meta_key, string $value ) : void {
-		if ( '' === $value ) {
+	protected function get_initial_pillar_post_id( int $post_id ) : int {
+		$pillar_post_id = (int) get_post_meta( $post_id, '_blog_qa_pillar_post_id', true );
+
+		if ( $pillar_post_id > 0 ) {
+			return $pillar_post_id;
+		}
+
+		return $this->resolve_legacy_pillar_post_id( $post_id );
+	}
+
+	/**
+	 * Resolve a label for the selected pillar post.
+	 */
+	protected function get_pillar_post_label( int $pillar_post_id ) : string {
+		if ( $pillar_post_id <= 0 ) {
+			return '';
+		}
+
+		$pillar_post = get_post( $pillar_post_id );
+
+		if ( ! $pillar_post instanceof WP_Post ) {
+			return '';
+		}
+
+		$title = trim( wp_strip_all_tags( get_the_title( $pillar_post ) ) );
+
+		if ( '' === $title ) {
+			$title = __( '(no title)', 'scwriter-blog-qa' );
+		}
+
+		return sprintf( '%1$s (#%2$d)', $title, $pillar_post_id );
+	}
+
+	/**
+	 * Resolve a saved local URL to the new pillar post ID without writing on render.
+	 */
+	protected function resolve_legacy_pillar_post_id( int $post_id ) : int {
+		$legacy_url = trim( (string) get_post_meta( $post_id, '_blog_qa_pillar_post_url', true ) );
+
+		if ( '' === $legacy_url || ! $this->is_local_site_url( $legacy_url ) ) {
+			return 0;
+		}
+
+		$pillar_post_id = url_to_postid( $legacy_url );
+
+		if ( $pillar_post_id <= 0 ) {
+			return 0;
+		}
+
+		return $pillar_post_id;
+	}
+
+	/**
+	 * Resolve the final pillar post ID before save, including legacy URL fallback.
+	 */
+	protected function resolve_effective_pillar_post_id( int $post_id, int $pillar_post_id ) : int {
+		if ( $pillar_post_id > 0 ) {
+			return $pillar_post_id;
+		}
+
+		return $this->resolve_legacy_pillar_post_id( $post_id );
+	}
+
+	/**
+	 * Return whether the provided URL belongs to this site.
+	 */
+	protected function is_local_site_url( string $url ) : bool {
+		$url_host = wp_parse_url( $url, PHP_URL_HOST );
+		$site_host = wp_parse_url( home_url( '/' ), PHP_URL_HOST );
+
+		return is_string( $url_host ) && is_string( $site_host ) && strtolower( $url_host ) === strtolower( $site_host );
+	}
+
+	/**
+	 * Update or delete an integer meta value depending on whether it is empty.
+	 */
+	protected function update_optional_int_meta( int $post_id, string $meta_key, int $value ) : void {
+		if ( $value <= 0 ) {
 			delete_post_meta( $post_id, $meta_key );
 			return;
 		}
 
-		update_post_meta( $post_id, $meta_key, $value );
+		update_post_meta( $post_id, $meta_key, (string) $value );
 	}
 }

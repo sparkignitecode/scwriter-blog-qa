@@ -108,6 +108,10 @@ class BlogQA_PostData {
 	/**
 	 * Return secondary keywords as a trimmed array.
 	 *
+	 * The `keywords` meta is assumed to store the primary keyword first followed by
+	 * secondary keywords. We only drop the first item when it matches the normalized
+	 * main keyword; otherwise the full normalized list is preserved.
+	 *
 	 * @return array<int, string>
 	 */
 	public function get_secondary_keywords() : array {
@@ -117,7 +121,12 @@ class BlogQA_PostData {
 			return array();
 		}
 
-		array_shift( $keywords );
+		$main_keyword = $this->normalize_string( $this->get_main_keyword() );
+		$first_keyword = $this->normalize_string( $keywords[0] ?? '' );
+
+		if ( '' !== $main_keyword && '' !== $first_keyword && strtolower( $main_keyword ) === strtolower( $first_keyword ) ) {
+			array_shift( $keywords );
+		}
 
 		return array_values( $keywords );
 	}
@@ -185,7 +194,7 @@ class BlogQA_PostData {
 	/**
 	 * Return content images found in the post HTML.
 	 *
-	 * @return array<int, array<string, string>>
+	 * @return array<int, array<string, int|string>>
 	 */
 	public function get_content_images() : array {
 		$document = new BlogQA_HtmlDocument( $this->get_content() );

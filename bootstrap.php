@@ -28,7 +28,7 @@ define( 'BLOGQA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
 require_once __DIR__ . '/src/html_document.php';
 require_once __DIR__ . '/src/post_data.php';
-require_once __DIR__ . '/src/pillar_post_fetcher.php';
+require_once __DIR__ . '/src/pillar_post_context.php';
 require_once __DIR__ . '/src/link_classifier.php';
 require_once __DIR__ . '/src/checks/base.php';
 require_once __DIR__ . '/src/checks/keyword_placement.php';

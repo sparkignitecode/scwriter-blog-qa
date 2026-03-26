@@ -88,7 +88,7 @@ class BlogQA_HtmlDocument {
 	/**
 	 * Return normalized image attributes.
 	 *
-	 * @return array<int, array<string, string>>
+	 * @return array<int, array<string, int|string>>
 	 */
 	public function get_images() : array {
 		$nodes = $this->xpath->query( '//img' );
@@ -107,6 +107,7 @@ class BlogQA_HtmlDocument {
 			$images[] = array(
 				'src' => trim( (string) $node->getAttribute( 'src' ) ),
 				'alt' => $this->normalize_text( (string) $node->getAttribute( 'alt' ) ),
+				'attachment_id' => $this->resolve_attachment_id( $node ),
 			);
 		}
 
@@ -179,5 +180,40 @@ class BlogQA_HtmlDocument {
 	 */
 	protected function normalize_text( string $text ) : string {
 		return trim( (string) preg_replace( '/\s+/u', ' ', wp_strip_all_tags( $text ) ) );
+	}
+
+	/**
+	 * Resolve a local attachment ID for an image node when possible.
+	 */
+	protected function resolve_attachment_id( \DOMElement $node ) : int {
+		$class_names = trim( (string) $node->getAttribute( 'class' ) );
+
+		if ( '' !== $class_names && preg_match( '/(?:^|\s)wp-image-(\d+)(?:\s|$)/', $class_names, $matches ) ) {
+			return (int) $matches[1];
+		}
+
+		$data_id = (int) $node->getAttribute( 'data-id' );
+
+		if ( $data_id > 0 ) {
+			return $data_id;
+		}
+
+		$src = trim( (string) $node->getAttribute( 'src' ) );
+
+		if ( '' === $src || ! $this->is_local_media_url( $src ) ) {
+			return 0;
+		}
+
+		return (int) attachment_url_to_postid( $src );
+	}
+
+	/**
+	 * Return whether the provided image URL belongs to the current site.
+	 */
+	protected function is_local_media_url( string $url ) : bool {
+		$url_host = wp_parse_url( $url, PHP_URL_HOST );
+		$site_host = wp_parse_url( home_url( '/' ), PHP_URL_HOST );
+
+		return is_string( $url_host ) && is_string( $site_host ) && strtolower( $url_host ) === strtolower( $site_host );
 	}
 }

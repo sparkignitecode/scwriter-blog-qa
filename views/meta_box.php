@@ -3,8 +3,8 @@
  * SCwriter Blog QA meta box template.
  *
  * @var string $location
- * @var string $pillar_post_url
- * @var string $pb_secondary_keywords
+ * @var int $pillar_post_id
+ * @var string $pillar_post_label
  * @var string $formatted_last_run
  * @var string $score_text
  * @var array<int, array<string, mixed>> $results
@@ -39,36 +39,28 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</div>
 
 		<div class="blogqa-field">
-			<label class="blogqa-label" for="blogqa-pillar-post-url">
-				<?php esc_html_e( 'Pillar Post URL', 'scwriter-blog-qa' ); ?>
+			<label class="blogqa-label" for="blogqa-pillar-post-label">
+				<?php esc_html_e( 'Pillar Post', 'scwriter-blog-qa' ); ?>
 			</label>
 			<input
-				type="url"
-				id="blogqa-pillar-post-url"
-				name="blogqa_pillar_post_url"
-				class="regular-text"
-				value="<?php echo esc_attr( $pillar_post_url ); ?>"
-				placeholder="<?php esc_attr_e( 'https://example.com/pillar-post/', 'scwriter-blog-qa' ); ?>"
+				type="hidden"
+				id="blogqa-pillar-post-id"
+				name="blogqa_pillar_post_id"
+				value="<?php echo esc_attr( (string) $pillar_post_id ); ?>"
 			/>
-		</div>
-
-		<div
-			class="blogqa-field"
-			id="blogqa-pb-secondary-keywords-field"
-			style="<?php echo '' === $pillar_post_url ? 'display: none;' : ''; ?>"
-		>
-			<label class="blogqa-label" for="blogqa-pb-secondary-keywords">
-				<?php esc_html_e( 'Pillar Post Secondary Keywords', 'scwriter-blog-qa' ); ?>
-			</label>
-			<textarea
-				id="blogqa-pb-secondary-keywords"
-				name="blogqa_pb_secondary_keywords"
-				class="large-text"
-				rows="4"
-				placeholder="<?php esc_attr_e( 'keyword one, keyword two, keyword three', 'scwriter-blog-qa' ); ?>"
-			><?php echo esc_textarea( $pb_secondary_keywords ); ?></textarea>
+			<div class="blogqa-pillars">
+				<input
+					type="search"
+					id="blogqa-pillar-post-label"
+					class="regular-text"
+					value="<?php echo esc_attr( $pillar_post_label ); ?>"
+					autocomplete="off"
+					placeholder="<?php esc_attr_e( 'Search for a post title', 'scwriter-blog-qa' ); ?>"
+				/>
+			</div>
+			<div id="blogqa-pillar-post-results" class="blogqa-autocomplete" hidden></div>
 			<p class="description">
-				<?php esc_html_e( 'Enter comma-separated keywords.', 'scwriter-blog-qa' ); ?>
+				<?php esc_html_e( 'Search for a post on this site. Pillar SEO data and keywords will be loaded from the selected post.', 'scwriter-blog-qa' ); ?>
 			</p>
 		</div>
 

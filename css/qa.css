@@ -46,6 +46,7 @@
 }
 
 .blogqa-field input[type="text"],
+.blogqa-field input[type="search"],
 .blogqa-field input[type="url"],
 .blogqa-field textarea {
 	box-sizing: border-box;
@@ -56,6 +57,7 @@
 }
 
 .blogqa-field input[type="text"],
+.blogqa-field input[type="search"],
 .blogqa-field input[type="url"] {
 	min-height: 38px;
 }
@@ -67,6 +69,48 @@
 
 .blogqa-field .description {
 	margin: 0;
+}
+
+.blogqa-pillars {
+	align-items: center;
+	display: flex;
+	gap: 8px;
+}
+
+.blogqa-autocomplete {
+	background: var(--blogqa-panel);
+	border: 1px solid var(--blogqa-border);
+	border-radius: 10px;
+	box-shadow: 0 10px 24px var(--blogqa-shadow);
+	margin-top: 8px;
+	max-height: 240px;
+	overflow: auto;
+}
+
+.blogqa-autocomplete-option {
+	background: transparent;
+	border: 0;
+	border-top: 1px solid var(--blogqa-border);
+	cursor: pointer;
+	display: block;
+	padding: 10px 12px;
+	text-align: left;
+	width: 100%;
+}
+
+.blogqa-autocomplete-option:first-child {
+	border-top: 0;
+}
+
+.blogqa-autocomplete-option:hover,
+.blogqa-autocomplete-option:focus {
+	background: var(--blogqa-bg);
+	outline: none;
+}
+
+.blogqa-autocomplete-status {
+	color: var(--blogqa-muted);
+	padding: 10px 12px;
 }
 
 .blogqa-actions {
