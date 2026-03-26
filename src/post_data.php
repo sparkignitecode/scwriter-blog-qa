@@ -111,7 +111,15 @@ class BlogQA_PostData {
 	 * @return array<int, string>
 	 */
 	public function get_secondary_keywords() : array {
-		return $this->normalize_keyword_list( get_post_meta( $this->post_id, 'keywords', true ) );
+		$keywords = $this->normalize_keyword_list( get_post_meta( $this->post_id, 'keywords', true ) );
+
+		if ( empty( $keywords ) ) {
+			return array();
+		}
+
+		array_shift( $keywords );
+
+		return array_values( $keywords );
 	}
 
 	/**
