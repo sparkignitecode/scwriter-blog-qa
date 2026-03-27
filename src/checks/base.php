@@ -134,6 +134,7 @@ abstract class BlogQA_CheckBase {
 	 */
 	protected function normalize_for_search( string $text ) : string {
 		$text = remove_accents( wp_strip_all_tags( $text ) );
+		$text = (string) preg_replace( '/[\-–—_]+/u', ' ', $text );
 		$text = trim( (string) preg_replace( '/\s+/u', ' ', $text ) );
 
 		if ( function_exists( 'mb_strtolower' ) ) {

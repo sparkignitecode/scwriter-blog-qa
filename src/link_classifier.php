@@ -70,13 +70,52 @@ class BlogQA_LinkClassifier {
 			return $this->build_classification( false, $this->infer_keyword_from_url( $href ), 0, $request_error, true );
 		}
 
+		$http_status_result = $this->fetch_http_status( $request_url, $href );
+
+		if ( '' !== (string) ( $http_status_result['fetch_error'] ?? '' ) ) {
+			return $http_status_result;
+		}
+
 		$spark_seo_classification = $this->classify_via_spark_seo( $request_url, $href );
 
 		if ( null !== $spark_seo_classification ) {
 			return $spark_seo_classification;
 		}
 
-		return $this->build_classification( false, $this->infer_keyword_from_url( $href ), 0, 'spark_seo response could not be loaded', true );
+		return $http_status_result;
+	}
+
+	/**
+	 * Fetch the direct target URL and confirm it returns HTTP 200.
+	 *
+	 * @return array<string, mixed>
+	 */
+	protected function fetch_http_status( string $request_url, string $href ) : array {
+		try {
+			$response = wp_safe_remote_get(
+				$request_url,
+				array(
+					'timeout' => 5,
+					'redirection' => 5,
+					'reject_unsafe_urls' => true,
+					'limit_response_size' => 4096,
+				)
+			);
+		} catch ( \Throwable $exception ) {
+			return $this->build_classification( false, $this->infer_keyword_from_url( $href ), 0, $exception->getMessage(), true );
+		}
+
+		if ( is_wp_error( $response ) ) {
+			return $this->build_classification( false, $this->infer_keyword_from_url( $href ), 0, $response->get_error_message(), true );
+		}
+
+		$status_code = (int) wp_remote_retrieve_response_code( $response );
+
+		if ( 200 !== $status_code ) {
+			return $this->build_classification( false, $this->infer_keyword_from_url( $href ), $status_code, sprintf( 'HTTP %d', $status_code ), true );
+		}
+
+		return $this->build_classification( false, $this->infer_keyword_from_url( $href ), 200, '', true );
 	}
 
 	/**
@@ -366,11 +405,8 @@ class BlogQA_LinkClassifier {
 	 * Return the final path segment from a URL.
 	 */
 	protected function extract_slug( string $href ) : string {
-		$path = (string) wp_parse_url( $this->build_request_url( $href ), PHP_URL_PATH );
-
-		if ( '' === $path ) {
-			return '';
-		}
+		$request_url = $this->build_request_url( $href );
+		$path = (string) wp_parse_url( $request_url, PHP_URL_PATH );
 
 		$segments = array_values(
 			array_filter(
@@ -379,11 +415,85 @@ class BlogQA_LinkClassifier {
 			)
 		);
 
-		if ( empty( $segments ) ) {
+		$slug = empty( $segments ) ? '' : rawurldecode( (string) end( $segments ) );
+
+		if ( '' !== $slug && ! $this->is_generic_slug_candidate( $slug ) ) {
+			return $slug;
+		}
+
+		$query_slug = $this->extract_slug_from_query( $request_url );
+
+		if ( '' !== $query_slug ) {
+			return $query_slug;
+		}
+
+		return $slug;
+	}
+
+	/**
+	 * Return whether the slug is too generic to use without checking query params.
+	 */
+	protected function is_generic_slug_candidate( string $slug ) : bool {
+		$slug = strtolower( trim( rawurldecode( $slug ) ) );
+
+		if ( '' === $slug ) {
+			return true;
+		}
+
+		if ( in_array( $slug, $this->get_generic_slugs(), true ) ) {
+			return true;
+		}
+
+		return (bool) preg_match( '/\.(php|asp|aspx|jsp|cgi)$/', $slug );
+	}
+
+	/**
+	 * Extract a keyword-like slug from common query parameters.
+	 */
+	protected function extract_slug_from_query( string $request_url ) : string {
+		$query = (string) wp_parse_url( $request_url, PHP_URL_QUERY );
+
+		if ( '' === $query ) {
 			return '';
 		}
 
-		return rawurldecode( (string) end( $segments ) );
+		parse_str( $query, $query_args );
+
+		if ( ! is_array( $query_args ) || empty( $query_args ) ) {
+			return '';
+		}
+
+		$candidate_keys = array( 'id', 'slug', 'page', 'pagename', 'name', 'title', 'doc', 'article' );
+
+		foreach ( $candidate_keys as $candidate_key ) {
+			if ( ! isset( $query_args[ $candidate_key ] ) || ! is_scalar( $query_args[ $candidate_key ] ) ) {
+				continue;
+			}
+
+			$candidate_value = trim( sanitize_text_field( (string) $query_args[ $candidate_key ] ) );
+
+			if ( '' === $candidate_value || is_numeric( $candidate_value ) ) {
+				continue;
+			}
+
+			return rawurldecode( $candidate_value );
+		}
+
+		foreach ( $query_args as $candidate_value ) {
+			if ( ! is_scalar( $candidate_value ) ) {
+				continue;
+			}
+
+			$candidate_value = trim( sanitize_text_field( (string) $candidate_value ) );
+
+			if ( '' === $candidate_value || is_numeric( $candidate_value ) || false === preg_match( '/[a-z]/i', $candidate_value ) ) {
+				continue;
+			}
+
+			return rawurldecode( $candidate_value );
+		}
+
+		return '';
 	}
 
 	/**

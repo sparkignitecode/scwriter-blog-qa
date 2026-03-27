@@ -32,7 +32,7 @@ class AIStrategy extends BlogQA_CheckBase {
 			'messages' => array(
 				array(
 					'role' => 'system',
-					'content' => 'You review SEO blog content and return only a JSON object. The object must contain title_not_commercial, keyword_is_informational, and no_grammar_errors. Each key must contain pass (boolean) and reason (string). Reasons must be concise. When pass is false, format reason as a short bullet-style list using separate lines that each start with "- ". Include at most 4 bullets. When pass is true, use a single short sentence.',
+					'content' => 'You review SEO blog content and return only a JSON object. The object must contain title_not_commercial, keyword_is_informational, and no_grammar_errors. Each key must contain pass (boolean) and reason (string). Reasons must be concise. When pass is false, format reason as a short bullet-style list using separate lines that each start with "- ". Include at most 4 bullets. Each bullet must describe one concrete issue and, when possible, include a short quoted example from the content. When pass is true, use a single short sentence.',
 				),
 				array(
 					'role' => 'user',
@@ -85,12 +85,7 @@ class AIStrategy extends BlogQA_CheckBase {
 					(bool) $payload['keyword_is_informational']['pass'] ? 'pass' : 'fail',
 					$this->normalize_reason( (string) $payload['keyword_is_informational']['reason'] )
 				),
-				$this->build_check(
-					'6.4',
-					'Content has no spelling or grammar errors',
-					(bool) $payload['no_grammar_errors']['pass'] ? 'pass' : 'fail',
-					$this->normalize_reason( (string) $payload['no_grammar_errors']['reason'] )
-				),
+				$this->build_grammar_check( $payload['no_grammar_errors'], $post_data ),
 			);
 		} catch ( \Throwable $exception ) {
 			return $this->build_uniform_results( 'error', $exception->getMessage() );
@@ -144,7 +139,10 @@ class AIStrategy extends BlogQA_CheckBase {
 				'The title should be judged for commercial wording like buy, hire, best, affordable, cheap, top, service, or company.',
 				'The main keyword should be judged as informational or commercial intent.',
 				'The full content text should be judged for spelling, grammar, punctuation, formatting artifacts, and obvious capitalization inconsistencies.',
+				'Do not fail domain-specific acronyms, sport names, or accepted transliteration variants when the meaning is clear.',
+				'Specifically treat BJJ, Brazilian jiu jitsu, Brazilian jiu-jitsu, jiu jitsu, and jiu-jitsu as acceptable variants rather than spelling or capitalization errors by themselves.',
 				'For any failed check, return a short list of concrete issues using newline-separated bullets that begin with "- ".',
+				'Each failed bullet should point to a real example from the content when possible, such as a quoted phrase, malformed heading, or punctuation issue.',
 				'Title: ' . $title,
 				'Main keyword: ' . $main_keyword,
 				'Content: ' . $content,
@@ -243,6 +241,108 @@ class AIStrategy extends BlogQA_CheckBase {
 				array_slice( $parts, 0, 4 )
 			)
 		);
+	}
+
+	/**
+	 * Build the grammar result, ignoring allowed martial-arts terminology variants.
+	 *
+	 * @param array<string, mixed> $grammar_payload
+	 * @param array<string, mixed> $post_data
+	 * @return array<string, string>
+	 */
+	protected function build_grammar_check( array $grammar_payload, array $post_data ) : array {
+		$reason = $this->normalize_reason( (string) $grammar_payload['reason'] );
+		$status = (bool) $grammar_payload['pass'] ? 'pass' : 'fail';
+		$content = (string) ( $post_data['content'] ?? '' );
+
+		if ( 'fail' === $status && $this->should_ignore_grammar_failure( $reason, $content ) ) {
+			$status = 'pass';
+			$reason = 'Accepted terminology variants such as BJJ and Brazilian jiu jitsu were ignored.';
+		}
+
+		return $this->build_check(
+			'6.4',
+			'Content has no spelling or grammar errors',
+			$status,
+			$reason
+		);
+	}
+
+	/**
+	 * Decide whether a grammar failure should be ignored as an allowed terminology variant.
+	 */
+	protected function should_ignore_grammar_failure( string $reason, string $content ) : bool {
+		$normalized_reason = $this->normalize_for_search( $reason );
+		$normalized_content = $this->normalize_for_search( $content );
+
+		if ( '' === $normalized_reason || '' === $normalized_content ) {
+			return false;
+		}
+
+		$allowed_terms = array(
+			'bjj',
+			'bj j',
+			'brazilian jiu jitsu',
+			'brazilian jiu-jitsu',
+			'jiu jitsu',
+			'jiu-jitsu',
+		);
+
+		$has_allowed_term = false;
+
+		foreach ( $allowed_terms as $allowed_term ) {
+			if ( false !== strpos( $normalized_content, $this->normalize_for_search( $allowed_term ) ) ) {
+				$has_allowed_term = true;
+				break;
+			}
+		}
+
+		if ( ! $has_allowed_term ) {
+			return false;
+		}
+
+		$capitalization_markers = array(
+			'capitalization',
+			'inconsistent capitalization',
+			'capitalisation',
+			'inconsistent capitalisation',
+			'casing',
+			'case consistency',
+			'uppercase',
+			'lowercase',
+		);
+
+		$has_capitalization_marker = false;
+
+		foreach ( $capitalization_markers as $marker ) {
+			if ( false !== strpos( $normalized_reason, $marker ) ) {
+				$has_capitalization_marker = true;
+				break;
+			}
+		}
+
+		if ( ! $has_capitalization_marker ) {
+			return false;
+		}
+
+		$hard_failure_markers = array(
+			'spelling mistake',
+			'spelling error',
+			'misspelling',
+			'grammar error',
+			'punctuation',
+			'fragment',
+			'run-on',
+			'typo',
+		);
+
+		foreach ( $hard_failure_markers as $marker ) {
+			if ( false !== strpos( $normalized_reason, $marker ) ) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/**

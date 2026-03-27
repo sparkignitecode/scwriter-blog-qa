@@ -121,10 +121,10 @@ class BlogQA_PostData {
 			return array();
 		}
 
-		$main_keyword = $this->normalize_string( $this->get_main_keyword() );
-		$first_keyword = $this->normalize_string( $keywords[0] ?? '' );
+		$main_keyword = $this->normalize_keyword_for_comparison( $this->get_main_keyword() );
+		$first_keyword = $this->normalize_keyword_for_comparison( $keywords[0] ?? '' );
 
-		if ( '' !== $main_keyword && '' !== $first_keyword && strtolower( $main_keyword ) === strtolower( $first_keyword ) ) {
+		if ( '' !== $main_keyword && '' !== $first_keyword && $main_keyword === $first_keyword ) {
 			array_shift( $keywords );
 		}
 
@@ -258,17 +258,35 @@ class BlogQA_PostData {
 		}
 
 		$keywords = array();
+		$seen_keywords = array();
 
 		foreach ( $items as $item ) {
 			$keyword = trim( sanitize_text_field( (string) $item ) );
+			$normalized_keyword = $this->normalize_keyword_for_comparison( $keyword );
 
-			if ( '' === $keyword || in_array( $keyword, $keywords, true ) ) {
+			if ( '' === $keyword || '' === $normalized_keyword || in_array( $normalized_keyword, $seen_keywords, true ) ) {
 				continue;
 			}
 
 			$keywords[] = $keyword;
+			$seen_keywords[] = $normalized_keyword;
 		}
 
 		return $keywords;
+	}
+
+	/**
+	 * Normalize a keyword for cross-format comparison.
+	 */
+	protected function normalize_keyword_for_comparison( string $keyword ) : string {
+		$keyword = $this->normalize_string( $keyword );
+		$keyword = (string) preg_replace( '/[\-–—_]+/u', ' ', $keyword );
+		$keyword = trim( (string) preg_replace( '/\s+/u', ' ', $keyword ) );
+
+		if ( function_exists( 'mb_strtolower' ) ) {
+			return mb_strtolower( $keyword, 'UTF-8' );
+		}
+
+		return strtolower( $keyword );
 	}
 }
