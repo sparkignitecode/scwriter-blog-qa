@@ -35,7 +35,7 @@ class BlogQA_WP {
 	}
 
 	/**
-	 * Enqueue SCwriter Blog QA assets on post editing screens.
+	 * Enqueue Spark Ignite Blog QA assets on post editing screens.
 	 */
 	public function load_resources() : void {
 		if ( ! $this->should_load_admin_assets() ) {

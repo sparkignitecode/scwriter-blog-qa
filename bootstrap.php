@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: SCwriter Blog QA
+ * Plugin Name: Spark Ignite Blog QA
  * Plugin URI: https://sparkmembership.com
- * Description: SEO QA checks for WordPress blog posts generated with SCwriter.
+ * Description: SEO QA checks for WordPress blog posts generated with Spark Ignite.
  * Version: 0.1.0
  * Requires at least: 6.0
  * Tested up to: 6.8.3
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Access denied.' );
 }
 
-define( 'BLOGQA_NAME', 'SCwriter Blog QA' );
+define( 'BLOGQA_NAME', 'Spark Ignite Blog QA' );
 define( 'BLOGQA_PREFIX', 'blogqa' );
 define( 'BLOGQA_VERSION', '0.1.0' );
 define( 'BLOGQA_FILE', __FILE__ );

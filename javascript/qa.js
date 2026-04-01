@@ -547,7 +547,7 @@
 
 		runButton.addEventListener("click", function () {
 			if (!data.restUrl) {
-				setError("Missing REST configuration for SCwriter Blog QA.");
+				setError("Missing REST configuration for Spark Ignite Blog QA.");
 				return;
 			}
 

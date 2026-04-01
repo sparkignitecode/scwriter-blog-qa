@@ -1,6 +1,6 @@
 <?php
 /**
- * SCwriter Blog QA meta box template.
+ * Spark Ignite Blog QA meta box template.
  *
  * @var string $location
  * @var int $pillar_post_id

@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Registers and renders the SCwriter Blog QA meta box.
+ * Registers and renders the Spark Ignite Blog QA meta box.
  */
 class BlogQA_Dashboard {
 
@@ -19,7 +19,7 @@ class BlogQA_Dashboard {
 	}
 
 	/**
-	 * Register the SCwriter Blog QA meta box on posts.
+	 * Register the Spark Ignite Blog QA meta box on posts.
 	 */
 	public function register_meta_box( string $post_type, WP_Post $post ) : void {
 		if ( 'post' !== $post_type || ! $this->can_access_post_qa( $post ) ) {
@@ -28,7 +28,7 @@ class BlogQA_Dashboard {
 
 		add_meta_box(
 			BLOGQA_PREFIX . '-meta-box',
-			__( 'SCwriter Blog QA', 'scwriter-blog-qa' ),
+			__( 'Spark Ignite Blog QA', 'scwriter-blog-qa' ),
 			array( $this, 'render_meta_box' ),
 			'post',
 			'normal',

@@ -1,6 +1,6 @@
-# SCwriter Blog QA
+# Spark Ignite Blog QA
 
-SCwriter Blog QA adds a post-level QA panel to the WordPress editor so editors can run a consistent set of content checks before publishing.
+Spark Ignite Blog QA adds a post-level QA panel to the WordPress editor so editors can run a consistent set of content checks before publishing.
 
 It is built for the `post` post type and focuses on blog-specific QA such as keyword placement, metadata, image coverage, location references, heading structure, and AI-reviewed strategy checks.
 
@@ -35,7 +35,7 @@ If no OpenAI API key is configured in `env.php`, the meta box shows a warning an
 ## Installation
 
 1. Place the plugin in `wp-content/plugins/scwriter-blog-qa`.
-2. Activate **SCwriter Blog QA** from the WordPress plugins screen.
+2. Activate **Spark Ignite Blog QA** from the WordPress plugins screen.
 3. Copy `env.example.php` to `env.php`.
 4. Add your real OpenAI API key to `env.php` if you want AI strategy checks.
 

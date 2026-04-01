@@ -103,7 +103,7 @@ class BlogQA_QAEndpoint {
 
 			return new WP_Error(
 				'blogqa_forbidden',
-				__( 'You are not allowed to run SCwriter Blog QA.', 'scwriter-blog-qa' ),
+				__( 'You are not allowed to run Spark Ignite Blog QA.', 'scwriter-blog-qa' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -114,7 +114,7 @@ class BlogQA_QAEndpoint {
 
 		return new WP_Error(
 			'blogqa_forbidden',
-			__( 'You are not allowed to run SCwriter Blog QA.', 'scwriter-blog-qa' ),
+			__( 'You are not allowed to run Spark Ignite Blog QA.', 'scwriter-blog-qa' ),
 			array( 'status' => 403 )
 		);
 	}
