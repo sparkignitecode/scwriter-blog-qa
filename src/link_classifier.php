@@ -137,17 +137,19 @@ class BlogQA_LinkClassifier {
 				)
 			);
 		} catch ( \Throwable $exception ) {
-			return $this->build_classification( false, $this->infer_keyword_from_url( $href ), 0, $exception->getMessage(), true );
+			return null;
 		}
 
 		if ( is_wp_error( $response ) ) {
-			return $this->build_classification( false, $this->infer_keyword_from_url( $href ), 0, $response->get_error_message(), true );
+			return null;
 		}
 
 		$status_code = (int) wp_remote_retrieve_response_code( $response );
 
 		if ( 200 !== $status_code ) {
-			return $this->build_classification( false, $this->infer_keyword_from_url( $href ), $status_code, sprintf( 'HTTP %d', $status_code ), true );
+			// The spark_seo endpoint is optional classification metadata and should
+			// never make an otherwise healthy link look broken.
+			return null;
 		}
 
 		$payload = json_decode( (string) wp_remote_retrieve_body( $response ), true );
