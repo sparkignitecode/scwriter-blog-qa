@@ -43,8 +43,8 @@ class BlogQA_OpenAISettingsPage {
 		}
 
 		add_menu_page(
-			__( 'Blog QA OpenAI Settings', 'scwriter-blog-qa' ),
-			__( 'Blog QA', 'scwriter-blog-qa' ),
+			__( 'Blog QA OpenAI Settings', 'sparkignite-blog-qa' ),
+			__( 'Blog QA', 'sparkignite-blog-qa' ),
 			'manage_options',
 			self::MENU_SLUG,
 			array( $this, 'render_site_page' ),
@@ -53,8 +53,8 @@ class BlogQA_OpenAISettingsPage {
 
 		add_submenu_page(
 			self::MENU_SLUG,
-			__( 'OpenAI Settings', 'scwriter-blog-qa' ),
-			__( 'OpenAI Settings', 'scwriter-blog-qa' ),
+			__( 'OpenAI Settings', 'sparkignite-blog-qa' ),
+			__( 'OpenAI Settings', 'sparkignite-blog-qa' ),
 			'manage_options',
 			self::MENU_SLUG,
 			array( $this, 'render_site_page' )
@@ -70,8 +70,8 @@ class BlogQA_OpenAISettingsPage {
 		}
 
 		add_menu_page(
-			__( 'Blog QA Network OpenAI Settings', 'scwriter-blog-qa' ),
-			__( 'Blog QA', 'scwriter-blog-qa' ),
+			__( 'Blog QA Network OpenAI Settings', 'sparkignite-blog-qa' ),
+			__( 'Blog QA', 'sparkignite-blog-qa' ),
 			'manage_network_options',
 			self::MENU_SLUG,
 			array( $this, 'render_network_page' ),
@@ -110,15 +110,15 @@ class BlogQA_OpenAISettingsPage {
 		$required_capability = $is_network ? 'manage_network_options' : 'manage_options';
 
 		if ( $is_network && ! is_multisite() ) {
-			wp_die( esc_html__( 'Network settings are not available on this site.', 'scwriter-blog-qa' ) );
+			wp_die( esc_html__( 'Network settings are not available on this site.', 'sparkignite-blog-qa' ) );
 		}
 
 		if ( is_multisite() && ! $is_network ) {
-			wp_die( esc_html__( 'OpenAI settings must be managed from network admin on multisite installs.', 'scwriter-blog-qa' ) );
+			wp_die( esc_html__( 'OpenAI settings must be managed from network admin on multisite installs.', 'sparkignite-blog-qa' ) );
 		}
 
 		if ( ! current_user_can( $required_capability ) ) {
-			wp_die( esc_html__( 'You do not have permission to update Blog QA settings.', 'scwriter-blog-qa' ) );
+			wp_die( esc_html__( 'You do not have permission to update Blog QA settings.', 'sparkignite-blog-qa' ) );
 		}
 
 		check_admin_referer( self::SAVE_ACTION );
@@ -129,6 +129,10 @@ class BlogQA_OpenAISettingsPage {
 			: '';
 
 		if ( '' === $submitted_api_key ) {
+			if ( ! $this->settings->has_stored_api_key() ) {
+				$this->redirect_with_status( $redirect_url, 'missing_key' );
+			}
+
 			$this->redirect_with_status( $redirect_url, 'unchanged' );
 		}
 
@@ -148,15 +152,15 @@ class BlogQA_OpenAISettingsPage {
 		$has_stored_key = $this->settings->has_stored_api_key();
 		$has_valid_key = $this->settings->has_api_key();
 		$page_title = $is_network
-			? __( 'Blog QA Network Settings', 'scwriter-blog-qa' )
-			: __( 'Blog QA OpenAI Settings', 'scwriter-blog-qa' );
+			? __( 'Blog QA Network Settings', 'sparkignite-blog-qa' )
+			: __( 'Blog QA OpenAI Settings', 'sparkignite-blog-qa' );
 		$description = $is_network
-			? __( 'This encrypted OpenAI API key is stored once for the entire network and is used by Blog QA on every subsite.', 'scwriter-blog-qa' )
-			: __( 'This encrypted OpenAI API key is stored for this site and is used by Blog QA AI checks.', 'scwriter-blog-qa' );
-		$form_action = $is_network ? network_admin_url( 'admin-post.php' ) : admin_url( 'admin-post.php' );
+			? __( 'This encrypted OpenAI API key is stored once for the entire network and is used by Blog QA on every subsite.', 'sparkignite-blog-qa' )
+			: __( 'This encrypted OpenAI API key is stored for this site and is used by Blog QA AI checks.', 'sparkignite-blog-qa' );
+		$form_action = admin_url( 'admin-post.php' );
 		$submit_label = $has_stored_key
-			? __( 'Update OpenAI API Key', 'scwriter-blog-qa' )
-			: __( 'Save OpenAI API Key', 'scwriter-blog-qa' );
+			? __( 'Update OpenAI API Key', 'sparkignite-blog-qa' )
+			: __( 'Save OpenAI API Key', 'sparkignite-blog-qa' );
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html( $page_title ); ?></h1>
@@ -164,26 +168,26 @@ class BlogQA_OpenAISettingsPage {
 			<?php $this->render_status_notice(); ?>
 			<?php if ( ! $this->settings->is_encryption_available() ) : ?>
 				<div class="notice notice-error inline">
-					<p><?php esc_html_e( 'This server does not currently support secure OpenAI key storage. Install OpenSSL with AES-256-GCM support or Sodium before saving a key.', 'scwriter-blog-qa' ); ?></p>
+					<p><?php esc_html_e( 'This server does not currently support secure OpenAI key storage. Install OpenSSL with AES-256-GCM support or Sodium before saving a key.', 'sparkignite-blog-qa' ); ?></p>
 				</div>
 			<?php endif; ?>
 			<?php if ( $has_stored_key && ! $has_valid_key ) : ?>
 				<div class="notice notice-warning inline">
-					<p><?php esc_html_e( 'A stored OpenAI API key could not be decrypted. This usually means WordPress salts changed or the saved payload is invalid. Save the key again to restore AI checks.', 'scwriter-blog-qa' ); ?></p>
+					<p><?php esc_html_e( 'A stored OpenAI API key could not be decrypted. This usually means WordPress salts changed or the saved payload is invalid. Save the key again to restore AI checks.', 'sparkignite-blog-qa' ); ?></p>
 				</div>
 			<?php endif; ?>
 			<table class="form-table" role="presentation">
 				<tbody>
 					<tr>
-						<th scope="row"><?php esc_html_e( 'Current status', 'scwriter-blog-qa' ); ?></th>
+						<th scope="row"><?php esc_html_e( 'Current status', 'sparkignite-blog-qa' ); ?></th>
 						<td>
 							<?php
 							if ( $has_valid_key ) {
-								esc_html_e( 'An encrypted OpenAI API key is stored.', 'scwriter-blog-qa' );
+								esc_html_e( 'An encrypted OpenAI API key is stored.', 'sparkignite-blog-qa' );
 							} elseif ( $has_stored_key ) {
-								esc_html_e( 'A stored key exists but must be saved again before Blog QA can use it.', 'scwriter-blog-qa' );
+								esc_html_e( 'A stored key exists but must be saved again before Blog QA can use it.', 'sparkignite-blog-qa' );
 							} else {
-								esc_html_e( 'No OpenAI API key has been saved yet.', 'scwriter-blog-qa' );
+								esc_html_e( 'No OpenAI API key has been saved yet.', 'sparkignite-blog-qa' );
 							}
 							?>
 						</td>
@@ -198,7 +202,7 @@ class BlogQA_OpenAISettingsPage {
 					<tbody>
 						<tr>
 							<th scope="row">
-								<label for="blogqa-openai-api-key"><?php esc_html_e( 'OpenAI API key', 'scwriter-blog-qa' ); ?></label>
+								<label for="blogqa-openai-api-key"><?php esc_html_e( 'OpenAI API key', 'sparkignite-blog-qa' ); ?></label>
 							</th>
 							<td>
 								<input
@@ -210,7 +214,7 @@ class BlogQA_OpenAISettingsPage {
 									autocomplete="new-password"
 									spellcheck="false"
 								/>
-								<p class="description"><?php esc_html_e( 'Leave this field blank to keep the existing key unchanged. The key is stored encrypted using WordPress secrets from wp-config.php.', 'scwriter-blog-qa' ); ?></p>
+								<p class="description"><?php esc_html_e( 'Leave this field blank to keep the existing key unchanged.', 'sparkignite-blog-qa' ); ?></p>
 							</td>
 						</tr>
 					</tbody>
@@ -237,21 +241,24 @@ class BlogQA_OpenAISettingsPage {
 		$message = '';
 
 		if ( 'updated' === $status ) {
-			$message = __( 'The OpenAI API key was saved successfully.', 'scwriter-blog-qa' );
+			$message = __( 'The OpenAI API key was saved successfully.', 'sparkignite-blog-qa' );
 		} elseif ( 'unchanged' === $status ) {
-			$message = __( 'The OpenAI API key was left unchanged.', 'scwriter-blog-qa' );
+			$message = __( 'The OpenAI API key was left unchanged.', 'sparkignite-blog-qa' );
+		} elseif ( 'missing_key' === $status ) {
+			$notice_class = 'notice-error';
+			$message = __( 'Enter an OpenAI API key before saving. Leave the field blank only when you want to keep an existing key unchanged.', 'sparkignite-blog-qa' );
 		} elseif ( 'blogqa_openai_crypto_unavailable' === $status ) {
 			$notice_class = 'notice-error';
-			$message = __( 'The server could not store the OpenAI API key securely because supported cryptography is unavailable.', 'scwriter-blog-qa' );
+			$message = __( 'The server could not store the OpenAI API key securely because supported cryptography is unavailable.', 'sparkignite-blog-qa' );
 		} elseif ( 'blogqa_openai_random_bytes_failed' === $status ) {
 			$notice_class = 'notice-error';
-			$message = __( 'The server could not generate secure random data for OpenAI key storage. Try again or contact your host.', 'scwriter-blog-qa' );
+			$message = __( 'The server could not generate secure random data for OpenAI key storage. Try again or contact your host.', 'sparkignite-blog-qa' );
 		} elseif ( 'blogqa_openai_encrypt_failed' === $status ) {
 			$notice_class = 'notice-error';
-			$message = __( 'The server could not encrypt the OpenAI API key. Check that OpenSSL or Sodium is configured correctly.', 'scwriter-blog-qa' );
+			$message = __( 'The server could not encrypt the OpenAI API key. Check that OpenSSL or Sodium is configured correctly.', 'sparkignite-blog-qa' );
 		} else {
 			$notice_class = 'notice-error';
-			$message = __( 'The OpenAI API key could not be saved. Try again or contact an administrator.', 'scwriter-blog-qa' );
+			$message = __( 'The OpenAI API key could not be saved. Try again or contact an administrator.', 'sparkignite-blog-qa' );
 		}
 		?>
 		<div class="notice <?php echo esc_attr( $notice_class ); ?> inline">

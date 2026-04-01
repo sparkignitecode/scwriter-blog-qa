@@ -28,7 +28,7 @@ class BlogQA_Dashboard {
 
 		add_meta_box(
 			BLOGQA_PREFIX . '-meta-box',
-			__( 'Spark Ignite Blog QA', 'scwriter-blog-qa' ),
+			__( 'Spark Ignite Blog QA', 'sparkignite-blog-qa' ),
 			array( $this, 'render_meta_box' ),
 			'post',
 			'normal',
@@ -137,21 +137,21 @@ class BlogQA_Dashboard {
 				'lastRun' => $last_run,
 				'lastRunMode' => $last_run_mode,
 				'strings' => array(
-					'run' => __( 'Run QA', 'scwriter-blog-qa' ),
-					'running' => __( 'Running QA...', 'scwriter-blog-qa' ),
-					'runFirst' => __( 'Run QA to evaluate this post.', 'scwriter-blog-qa' ),
-					'lastRunNever' => __( 'Last run: Not yet', 'scwriter-blog-qa' ),
-					'scoreEmpty' => __( 'No results yet', 'scwriter-blog-qa' ),
-					'errorPrefix' => __( 'Unable to run QA:', 'scwriter-blog-qa' ),
-					'locationRequired' => __( 'Location is required to run QA.', 'scwriter-blog-qa' ),
-					'pillarSearchPlaceholder' => __( 'Search pillar posts', 'scwriter-blog-qa' ),
-					'pillarSearchEmpty' => __( 'No pillar posts found.', 'scwriter-blog-qa' ),
-					'pillarSearchLoading' => __( 'Searching pillar posts...', 'scwriter-blog-qa' ),
-					'pillarSearchError' => __( 'Could not load pillar posts.', 'scwriter-blog-qa' ),
-					'currentModePillar' => __( 'Leave empty for pillar mode. Select a post for regular mode.', 'scwriter-blog-qa' ),
-					'currentModeRegular' => __( 'Regular mode: comparing this post against the selected pillar post.', 'scwriter-blog-qa' ),
-					'resultsModePillar' => __( 'Last results: Pillar mode', 'scwriter-blog-qa' ),
-					'resultsModeRegular' => __( 'Last results: Regular mode', 'scwriter-blog-qa' ),
+					'run' => __( 'Run QA', 'sparkignite-blog-qa' ),
+					'running' => __( 'Running QA...', 'sparkignite-blog-qa' ),
+					'runFirst' => __( 'Run QA to evaluate this post.', 'sparkignite-blog-qa' ),
+					'lastRunNever' => __( 'Last run: Not yet', 'sparkignite-blog-qa' ),
+					'scoreEmpty' => __( 'No results yet', 'sparkignite-blog-qa' ),
+					'errorPrefix' => __( 'Unable to run QA:', 'sparkignite-blog-qa' ),
+					'locationRequired' => __( 'Location is required to run QA.', 'sparkignite-blog-qa' ),
+					'pillarSearchPlaceholder' => __( 'Search pillar posts', 'sparkignite-blog-qa' ),
+					'pillarSearchEmpty' => __( 'No pillar posts found.', 'sparkignite-blog-qa' ),
+					'pillarSearchLoading' => __( 'Searching pillar posts...', 'sparkignite-blog-qa' ),
+					'pillarSearchError' => __( 'Could not load pillar posts.', 'sparkignite-blog-qa' ),
+					'currentModePillar' => __( 'Leave empty for pillar mode. Select a post for regular mode.', 'sparkignite-blog-qa' ),
+					'currentModeRegular' => __( 'Regular mode: comparing this post against the selected pillar post.', 'sparkignite-blog-qa' ),
+					'resultsModePillar' => __( 'Last results: Pillar mode', 'sparkignite-blog-qa' ),
+					'resultsModeRegular' => __( 'Last results: Regular mode', 'sparkignite-blog-qa' ),
 				),
 			)
 		);
@@ -162,20 +162,20 @@ class BlogQA_Dashboard {
 	 */
 	protected function format_last_run( int $last_run ) : string {
 		if ( $last_run <= 0 ) {
-			return __( 'Last run: Not yet', 'scwriter-blog-qa' );
+			return __( 'Last run: Not yet', 'sparkignite-blog-qa' );
 		}
 
 		if ( ( time() - $last_run ) < DAY_IN_SECONDS ) {
 			return sprintf(
 				/* translators: %s is a relative time string. */
-				__( 'Last run: %s ago', 'scwriter-blog-qa' ),
+				__( 'Last run: %s ago', 'sparkignite-blog-qa' ),
 				human_time_diff( $last_run, time() )
 			);
 		}
 
 		return sprintf(
 			/* translators: %s is a formatted date. */
-			__( 'Last run: %s', 'scwriter-blog-qa' ),
+			__( 'Last run: %s', 'sparkignite-blog-qa' ),
 			wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $last_run )
 		);
 	}
@@ -187,7 +187,7 @@ class BlogQA_Dashboard {
 	 */
 	protected function format_score( array $results ) : string {
 		if ( empty( $results ) ) {
-			return __( 'No results yet', 'scwriter-blog-qa' );
+			return __( 'No results yet', 'sparkignite-blog-qa' );
 		}
 
 		$passed = 0;
@@ -213,7 +213,7 @@ class BlogQA_Dashboard {
 
 		return sprintf(
 			/* translators: 1: passed checks, 2: total non-skipped checks. */
-			__( '%1$d / %2$d passed', 'scwriter-blog-qa' ),
+			__( '%1$d / %2$d passed', 'sparkignite-blog-qa' ),
 			$passed,
 			$total
 		);
@@ -250,7 +250,7 @@ class BlogQA_Dashboard {
 		$title = trim( wp_strip_all_tags( get_the_title( $pillar_post ) ) );
 
 		if ( '' === $title ) {
-			$title = __( '(no title)', 'scwriter-blog-qa' );
+			$title = __( '(no title)', 'sparkignite-blog-qa' );
 		}
 
 		return sprintf( '%1$s (#%2$d)', $title, $pillar_post_id );

@@ -111,10 +111,10 @@ class BlogQA_OpenAISettings {
 	 */
 	public function get_missing_key_notice() : string {
 		if ( is_multisite() ) {
-			return __( 'AI-backed checks will be skipped until a network administrator saves an OpenAI API key in Network Admin > Blog QA.', 'scwriter-blog-qa' );
+			return __( 'AI-backed checks will be skipped until a network administrator saves an OpenAI API key in Network Admin > Blog QA.', 'sparkignite-blog-qa' );
 		}
 
-		return __( 'AI-backed checks will be skipped until an administrator saves an OpenAI API key in Blog QA > OpenAI Settings.', 'scwriter-blog-qa' );
+		return __( 'AI-backed checks will be skipped until an administrator saves an OpenAI API key in Blog QA > OpenAI Settings.', 'sparkignite-blog-qa' );
 	}
 
 	/**
@@ -187,7 +187,7 @@ class BlogQA_OpenAISettings {
 
 		return new WP_Error(
 			'blogqa_openai_crypto_unavailable',
-			__( 'This server cannot store the OpenAI API key securely because neither OpenSSL AES-256-GCM nor Sodium is available.', 'scwriter-blog-qa' )
+			__( 'This server cannot store the OpenAI API key securely because neither OpenSSL AES-256-GCM nor Sodium is available.', 'sparkignite-blog-qa' )
 		);
 	}
 
@@ -202,7 +202,7 @@ class BlogQA_OpenAISettings {
 		} catch ( \Throwable $exception ) {
 			return new WP_Error(
 				'blogqa_openai_random_bytes_failed',
-				__( 'The server could not generate secure random bytes for OpenAI key storage.', 'scwriter-blog-qa' )
+				__( 'The server could not generate secure random bytes for OpenAI key storage.', 'sparkignite-blog-qa' )
 			);
 		}
 
@@ -221,7 +221,7 @@ class BlogQA_OpenAISettings {
 		if ( ! is_string( $ciphertext ) || '' === $tag ) {
 			return new WP_Error(
 				'blogqa_openai_encrypt_failed',
-				__( 'The server could not encrypt the OpenAI API key.', 'scwriter-blog-qa' )
+				__( 'The server could not encrypt the OpenAI API key.', 'sparkignite-blog-qa' )
 			);
 		}
 
@@ -247,7 +247,7 @@ class BlogQA_OpenAISettings {
 		} catch ( \Throwable $exception ) {
 			return new WP_Error(
 				'blogqa_openai_random_bytes_failed',
-				__( 'The server could not generate secure random bytes for OpenAI key storage.', 'scwriter-blog-qa' )
+				__( 'The server could not generate secure random bytes for OpenAI key storage.', 'sparkignite-blog-qa' )
 			);
 		}
 

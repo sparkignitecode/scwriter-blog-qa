@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<div class="blogqa-toolbar">
 		<div class="blogqa-field">
 			<label class="blogqa-label" for="blogqa-location">
-				<?php esc_html_e( 'Location', 'scwriter-blog-qa' ); ?>
+				<?php esc_html_e( 'Location', 'sparkignite-blog-qa' ); ?>
 				<span class="required">*</span>
 			</label>
 			<input
@@ -32,16 +32,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 				required
 				aria-required="true"
 				aria-describedby="blogqa-location-help"
-				placeholder="<?php esc_attr_e( 'Enter a city or service area', 'scwriter-blog-qa' ); ?>"
+				placeholder="<?php esc_attr_e( 'Enter a city or service area', 'sparkignite-blog-qa' ); ?>"
 			/>
 			<p id="blogqa-location-help" class="description">
-				<?php esc_html_e( 'Location must be set before running QA.', 'scwriter-blog-qa' ); ?>
+				<?php esc_html_e( 'Location must be set before running QA.', 'sparkignite-blog-qa' ); ?>
 			</p>
 		</div>
 
 		<div class="blogqa-field">
 			<label class="blogqa-label" for="blogqa-pillar-post-label">
-				<?php esc_html_e( 'Pillar Post', 'scwriter-blog-qa' ); ?>
+				<?php esc_html_e( 'Pillar Post', 'sparkignite-blog-qa' ); ?>
 			</label>
 			<input
 				type="hidden"
@@ -56,7 +56,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 					class="regular-text"
 					value="<?php echo esc_attr( $pillar_post_label ); ?>"
 					autocomplete="off"
-					placeholder="<?php esc_attr_e( 'Search for a post title', 'scwriter-blog-qa' ); ?>"
+					placeholder="<?php esc_attr_e( 'Search for a post title', 'sparkignite-blog-qa' ); ?>"
 				/>
 			</div>
 			<div id="blogqa-pillar-post-results" class="blogqa-autocomplete" hidden></div>
@@ -67,7 +67,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<span class="blogqa-label blogqa-label-placeholder" aria-hidden="true">&nbsp;</span>
 			<div class="blogqa-action-row">
 				<button type="button" class="button button-primary" id="blogqa-run-button">
-					<?php esc_html_e( 'Run QA', 'scwriter-blog-qa' ); ?>
+					<?php esc_html_e( 'Run QA', 'sparkignite-blog-qa' ); ?>
 				</button>
 				<span id="blogqa-spinner" class="spinner blogqa-spinner" aria-hidden="true"></span>
 			</div>
@@ -99,8 +99,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<?php
 			echo esc_html(
 				empty( $results )
-					? __( 'Run QA to evaluate this post.', 'scwriter-blog-qa' )
-					: __( 'Loading previous QA results...', 'scwriter-blog-qa' )
+					? __( 'Run QA to evaluate this post.', 'sparkignite-blog-qa' )
+					: __( 'Loading previous QA results...', 'sparkignite-blog-qa' )
 			);
 			?>
 		</p>

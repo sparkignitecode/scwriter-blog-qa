@@ -103,7 +103,7 @@ class BlogQA_QAEndpoint {
 
 			return new WP_Error(
 				'blogqa_forbidden',
-				__( 'You are not allowed to run Spark Ignite Blog QA.', 'scwriter-blog-qa' ),
+				__( 'You are not allowed to run Spark Ignite Blog QA.', 'sparkignite-blog-qa' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -114,7 +114,7 @@ class BlogQA_QAEndpoint {
 
 		return new WP_Error(
 			'blogqa_forbidden',
-			__( 'You are not allowed to run Spark Ignite Blog QA.', 'scwriter-blog-qa' ),
+			__( 'You are not allowed to run Spark Ignite Blog QA.', 'sparkignite-blog-qa' ),
 			array( 'status' => 403 )
 		);
 	}
@@ -129,7 +129,7 @@ class BlogQA_QAEndpoint {
 		if ( ! $post ) {
 			return new WP_Error(
 				'blogqa_post_not_found',
-				__( 'Post not found.', 'scwriter-blog-qa' ),
+				__( 'Post not found.', 'sparkignite-blog-qa' ),
 				array( 'status' => 404 )
 			);
 		}
@@ -183,7 +183,7 @@ class BlogQA_QAEndpoint {
 
 		return new WP_Error(
 			'blogqa_invalid_post_id',
-			__( 'A valid post ID is required.', 'scwriter-blog-qa' ),
+			__( 'A valid post ID is required.', 'sparkignite-blog-qa' ),
 			array( 'status' => 400 )
 		);
 	}
@@ -200,7 +200,7 @@ class BlogQA_QAEndpoint {
 
 		return new WP_Error(
 			'blogqa_location_required',
-			__( 'Location is required to run QA.', 'scwriter-blog-qa' ),
+			__( 'Location is required to run QA.', 'sparkignite-blog-qa' ),
 			array( 'status' => 400 )
 		);
 	}
@@ -219,7 +219,7 @@ class BlogQA_QAEndpoint {
 
 		return new WP_Error(
 			'blogqa_invalid_pillar_post_id',
-			__( 'Pillar Post ID must be zero or a positive integer.', 'scwriter-blog-qa' ),
+			__( 'Pillar Post ID must be zero or a positive integer.', 'sparkignite-blog-qa' ),
 			array( 'status' => 400 )
 		);
 	}
@@ -234,7 +234,7 @@ class BlogQA_QAEndpoint {
 
 		return new WP_Error(
 			'blogqa_forbidden',
-			__( 'You are not allowed to search Pillar Posts.', 'scwriter-blog-qa' ),
+			__( 'You are not allowed to search Pillar Posts.', 'sparkignite-blog-qa' ),
 			array( 'status' => 403 )
 		);
 	}
@@ -291,7 +291,7 @@ class BlogQA_QAEndpoint {
 		$title = trim( wp_strip_all_tags( get_the_title( $post ) ) );
 
 		if ( '' === $title ) {
-			$title = __( '(no title)', 'scwriter-blog-qa' );
+			$title = __( '(no title)', 'sparkignite-blog-qa' );
 		}
 
 		return sprintf( '%1$s (#%2$d)', $title, $post_id );
