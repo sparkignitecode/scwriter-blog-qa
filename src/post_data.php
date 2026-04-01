@@ -135,7 +135,7 @@ class BlogQA_PostData {
 	 * Return the per-post location value.
 	 */
 	public function get_location() : string {
-		return $this->normalize_string( get_post_meta( $this->post_id, '_blog_qa_location', true ) );
+		return blogqa_resolve_location_default( $this->post_id );
 	}
 
 	/**

@@ -26,6 +26,7 @@ define( 'BLOGQA_FILE', __FILE__ );
 define( 'BLOGQA_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'BLOGQA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
+require_once __DIR__ . '/src/helpers.php';
 require_once __DIR__ . '/src/html_document.php';
 require_once __DIR__ . '/src/post_data.php';
 require_once __DIR__ . '/src/pillar_post_context.php';

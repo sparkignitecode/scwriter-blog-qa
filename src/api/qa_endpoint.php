@@ -9,6 +9,9 @@ use WP_Post;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Server;
+use function BlogQA\blogqa_user_can_run_qa_for_post;
+use function BlogQA\blogqa_user_can_search_pillar_posts;
+use function BlogQA\blogqa_user_can_use_plugin;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
@@ -89,11 +92,23 @@ class BlogQA_QAEndpoint {
 	public function can_run_checks( WP_REST_Request $request ) {
 		$post_id = (int) $request->get_param( 'post_id' );
 
-		if ( $post_id <= 0 || ! get_post( $post_id ) ) {
+		if ( $post_id <= 0 ) {
 			return true;
 		}
 
-		if ( current_user_can( 'edit_post', $post_id ) ) {
+		if ( ! get_post( $post_id ) ) {
+			if ( blogqa_user_can_use_plugin() ) {
+				return true;
+			}
+
+			return new WP_Error(
+				'blogqa_forbidden',
+				__( 'You are not allowed to run SCwriter Blog QA.', 'scwriter-blog-qa' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		if ( blogqa_user_can_run_qa_for_post( $post_id ) ) {
 			return true;
 		}
 
@@ -213,7 +228,7 @@ class BlogQA_QAEndpoint {
 	 * Check whether the current user can search local pillar posts.
 	 */
 	public function can_search_pillar_posts() {
-		if ( current_user_can( 'edit_posts' ) ) {
+		if ( blogqa_user_can_search_pillar_posts() ) {
 			return true;
 		}
 

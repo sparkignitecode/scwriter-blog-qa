@@ -22,7 +22,7 @@ class BlogQA_Dashboard {
 	 * Register the SCwriter Blog QA meta box on posts.
 	 */
 	public function register_meta_box( string $post_type, WP_Post $post ) : void {
-		if ( 'post' !== $post_type || ! $this->can_edit_post( $post ) ) {
+		if ( 'post' !== $post_type || ! $this->can_access_post_qa( $post ) ) {
 			return;
 		}
 
@@ -40,7 +40,7 @@ class BlogQA_Dashboard {
 	 * Render the meta box template and localize the initial state.
 	 */
 	public function render_meta_box( WP_Post $post ) : void {
-		if ( ! $this->can_edit_post( $post ) ) {
+		if ( ! $this->can_access_post_qa( $post ) ) {
 			return;
 		}
 
@@ -86,7 +86,7 @@ class BlogQA_Dashboard {
 			return;
 		}
 
-		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+		if ( ! blogqa_user_can_run_qa_for_post( $post_id ) ) {
 			return;
 		}
 
@@ -101,34 +101,17 @@ class BlogQA_Dashboard {
 	}
 
 	/**
-	 * Return whether the current user can edit the current post.
+	 * Return whether the current user can access Blog QA for the current post.
 	 */
-	protected function can_edit_post( WP_Post $post ) : bool {
-		return current_user_can( 'edit_post', $post->ID );
+	protected function can_access_post_qa( WP_Post $post ) : bool {
+		return blogqa_user_can_run_qa_for_post( $post->ID );
 	}
 
 	/**
 	 * Return the initial location value for the meta box.
 	 */
 	protected function get_initial_location( int $post_id ) : string {
-		$location = trim( (string) get_post_meta( $post_id, '_blog_qa_location', true ) );
-
-		if ( '' !== $location ) {
-			return $location;
-		}
-
-		$brand_name = trim( (string) get_post_meta( $post_id, 'brand_name', true ) );
-
-		if ( '' !== $brand_name ) {
-			return $brand_name;
-		}
-
-		// Backward compatibility for posts created before the meta key rename.
-		$legacy_brand_meta_key = defined( 'SCWRITER_PREFIX' )
-			? SCWRITER_PREFIX . '_brand_name'
-			: 'scwriter__brand_name';
-
-		return trim( (string) get_post_meta( $post_id, $legacy_brand_meta_key, true ) );
+		return blogqa_resolve_location_default( $post_id );
 	}
 
 	/**

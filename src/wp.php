@@ -70,6 +70,31 @@ class BlogQA_WP {
 
 		$screen = get_current_screen();
 
-		return $screen && 'post' === $screen->post_type;
+		if ( ! $screen || 'post' !== $screen->post_type ) {
+			return false;
+		}
+
+		$post_id = $this->get_current_post_id();
+
+		if ( $post_id > 0 ) {
+			return blogqa_user_can_run_qa_for_post( $post_id );
+		}
+
+		return blogqa_user_can_search_pillar_posts();
+	}
+
+	/**
+	 * Return the current post ID from the post editor request when available.
+	 */
+	protected function get_current_post_id() : int {
+		if ( isset( $_GET['post'] ) ) {
+			return absint( wp_unslash( $_GET['post'] ) );
+		}
+
+		if ( isset( $_POST['post_ID'] ) ) {
+			return absint( wp_unslash( $_POST['post_ID'] ) );
+		}
+
+		return 0;
 	}
 }

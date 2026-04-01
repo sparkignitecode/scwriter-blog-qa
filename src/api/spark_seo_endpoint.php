@@ -41,13 +41,13 @@ class BlogQA_SparkSeoEndpoint {
 			return;
 		}
 
-		if ( ! is_singular() ) {
+		if ( ! is_singular( 'post' ) ) {
 			wp_send_json( array( 'error' => 'Post not found' ), 404 );
 		}
 
 		$post = get_queried_object();
 
-		if ( ! ( $post instanceof WP_Post ) ) {
+		if ( ! ( $post instanceof WP_Post ) || ! $this->is_public_spark_seo_post( $post ) ) {
 			wp_send_json( array( 'error' => 'Post not found' ), 404 );
 		}
 
@@ -93,5 +93,14 @@ class BlogQA_SparkSeoEndpoint {
 		 * Filter the spark_seo PP/LP flag for the current singular object.
 		 */
 		return (bool) apply_filters( 'blogqa_spark_seo_is_pp_lp', false, $post, $post_data );
+	}
+
+	/**
+	 * Return whether the queried post is eligible for the public spark_seo payload.
+	 */
+	protected function is_public_spark_seo_post( WP_Post $post ) : bool {
+		return 'post' === $post->post_type
+			&& 'publish' === $post->post_status
+			&& '' === (string) $post->post_password;
 	}
 }
