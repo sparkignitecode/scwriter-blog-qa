@@ -25,19 +25,22 @@ Checks are grouped into two broad categories:
 - WordPress with access to edit posts
 - The `scwriter-blog-qa` plugin installed and activated
 - A valid location entered before running QA
-For AI strategy checks:
 
-- Add an OpenAI API key to `wp-content/plugins/scwriter-blog-qa/env.php`
-- Start from `wp-content/plugins/scwriter-blog-qa/env.example.php`
+For AI strategy checks, save an OpenAI API key in the Blog QA settings screen:
 
-If no OpenAI API key is configured in `env.php`, the meta box shows a warning and AI strategy checks are skipped.
+- Single site: `Blog QA > OpenAI Settings`
+- Multisite: `Network Admin > Blog QA`
+
+The key is stored encrypted in WordPress options using installation secrets from `wp-config.php`. If no OpenAI API key is configured, the meta box shows a warning and AI strategy checks are skipped.
 
 ## Installation
 
 1. Place the plugin in `wp-content/plugins/scwriter-blog-qa`.
 2. Activate **Spark Ignite Blog QA** from the WordPress plugins screen.
-3. Copy `env.example.php` to `env.php`.
-4. Add your real OpenAI API key to `env.php` if you want AI strategy checks.
+3. Open the Blog QA settings screen.
+4. Save your OpenAI API key if you want AI strategy checks.
+
+On multisite installs, only network administrators can save the OpenAI key and the same key is used across all subsites.
 
 ## How To Use
 
@@ -76,6 +79,13 @@ The plugin stores QA data as post meta on the post being reviewed:
 
 This allows the latest results to remain visible in the meta box after refresh.
 
+When AI checks are enabled, the plugin also stores one encrypted OpenAI API key in WordPress options:
+
+- Single site: stored in `wp_options`
+- Multisite: stored once in network `sitemeta`
+
+The stored value is encrypted before it reaches the database, so the raw API key is not persisted in plaintext.
+
 ## REST Endpoint
 
 The QA run is exposed through the WordPress REST API at:
@@ -92,7 +102,9 @@ The Location field is required. Add it and run the check again.
 
 **AI strategy checks are skipped**
 
-Make sure `wp-content/plugins/scwriter-blog-qa/env.php` exists and defines `BLOGQA_OPENAI_API_KEY` with a real value.
+Make sure an administrator has saved a valid OpenAI API key in the Blog QA settings screen. On multisite, this must be done in network admin.
+
+If WordPress salts or keys in `wp-config.php` change, save the OpenAI API key again so Blog QA can decrypt it with the new installation secrets.
 
 **The Blog QA box does not appear**
 

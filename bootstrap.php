@@ -28,6 +28,8 @@ define( 'BLOGQA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
 require_once __DIR__ . '/src/helpers.php';
 require_once __DIR__ . '/src/html_document.php';
+require_once __DIR__ . '/src/openai_settings.php';
+require_once __DIR__ . '/src/openai_settings_page.php';
 require_once __DIR__ . '/src/post_data.php';
 require_once __DIR__ . '/src/pillar_post_context.php';
 require_once __DIR__ . '/src/link_classifier.php';

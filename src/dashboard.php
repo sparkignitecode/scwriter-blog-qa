@@ -54,7 +54,9 @@ class BlogQA_Dashboard {
 
 		$last_run = (int) get_post_meta( $post->ID, '_blog_qa_last_run', true );
 		$last_run_mode = $this->get_last_run_mode( $post->ID, $pillar_post_id, $results );
-		$is_ai_key_configured = '' !== trim( ( new \BlogQA\Checks\AIStrategy() )->get_openai_api_key() );
+		$openai_settings = new BlogQA_OpenAISettings();
+		$is_ai_key_configured = $openai_settings->has_api_key();
+		$ai_key_notice = $openai_settings->get_missing_key_notice();
 
 		$this->localize_script( $post->ID, $location, $pillar_post_id, $pillar_post_label, $results, $last_run, $last_run_mode );
 

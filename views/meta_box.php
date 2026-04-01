@@ -9,6 +9,7 @@
  * @var string $score_text
  * @var array<int, array<string, mixed>> $results
  * @var bool $is_ai_key_configured
+ * @var string $ai_key_notice
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -87,7 +88,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 	<?php if ( ! $is_ai_key_configured ) : ?>
 		<div class="notice notice-warning inline blogqa-warning">
-			<p><?php esc_html_e( 'AI-backed checks will be skipped until an OpenAI API key is added to scwriter-blog-qa/env.php.', 'scwriter-blog-qa' ); ?></p>
+			<p><?php echo esc_html( $ai_key_notice ); ?></p>
 		</div>
 	<?php endif; ?>
 

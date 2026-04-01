@@ -2,6 +2,8 @@
 
 namespace BlogQA\Checks;
 
+use BlogQA\BlogQA_OpenAISettings;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
 }
@@ -88,38 +90,16 @@ class AIStrategy extends BlogQA_CheckBase {
 				$this->build_grammar_check( $payload['no_grammar_errors'], $post_data ),
 			);
 		} catch ( \Throwable $exception ) {
-			return $this->build_uniform_results( 'error', $exception->getMessage() );
+			$this->log_ai_request_exception( $exception );
+			return $this->build_uniform_results( 'error', 'AI request failed. Check server logs and try again.' );
 		}
 	}
 
 	/**
-	 * Read the plugin OpenAI API key from env.php.
+	 * Read the plugin OpenAI API key from the encrypted settings store.
 	 */
 	public function get_openai_api_key() : string {
-		$this->load_env_file();
-
-		if ( ! defined( 'BLOGQA_OPENAI_API_KEY' ) || ! is_string( BLOGQA_OPENAI_API_KEY ) ) {
-			return '';
-		}
-
-		return trim( BLOGQA_OPENAI_API_KEY );
-	}
-
-	/**
-	 * Load plugin-local environment config from env.php.
-	 */
-	protected function load_env_file() : void {
-		if ( defined( 'BLOGQA_OPENAI_API_KEY' ) ) {
-			return;
-		}
-
-		$config_path = BLOGQA_PLUGIN_DIR . 'env.php';
-
-		if ( ! file_exists( $config_path ) ) {
-			return;
-		}
-
-		require_once $config_path;
+		return ( new BlogQA_OpenAISettings() )->get_api_key();
 	}
 
 	/**
@@ -359,5 +339,18 @@ class AIStrategy extends BlogQA_CheckBase {
 		}
 
 		return $default_message;
+	}
+
+	/**
+	 * Log AI request exceptions without exposing them in the editor UI.
+	 */
+	protected function log_ai_request_exception( \Throwable $exception ) : void {
+		error_log(
+			sprintf(
+				'[Blog QA] AI strategy request exception: %s: %s',
+				$exception::class,
+				$exception->getMessage()
+			)
+		);
 	}
 }

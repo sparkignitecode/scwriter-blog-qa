@@ -13,10 +13,6 @@ if ( ! defined( 'DISABLE_WP_CRON' ) ) {
 	define( 'DISABLE_WP_CRON', true );
 }
 
-if ( ! defined( 'BLOGQA_OPENAI_API_KEY' ) ) {
-	define( 'BLOGQA_OPENAI_API_KEY', '' );
-}
-
 if ( ! defined( 'BLOGQA_DISABLE_REMOTE_FETCHES' ) ) {
 	define( 'BLOGQA_DISABLE_REMOTE_FETCHES', true );
 }
@@ -195,6 +191,12 @@ if ( empty( $admin_ids ) ) {
 
 wp_set_current_user( (int) $admin_ids[0] );
 
+if ( is_multisite() ) {
+	delete_site_option( \BlogQA\BlogQA_OpenAISettings::OPTION_NAME );
+} else {
+	delete_option( \BlogQA\BlogQA_OpenAISettings::OPTION_NAME );
+}
+
 $created_post_ids = array();
 $exit_code = 0;
 $output_message = "Verification passed.\n";
@@ -343,6 +345,13 @@ try {
 	$exit_code = 1;
 } finally {
 	blogqa_note( 'cleaning up temporary posts' );
+
+	if ( is_multisite() ) {
+		delete_site_option( \BlogQA\BlogQA_OpenAISettings::OPTION_NAME );
+	} else {
+		delete_option( \BlogQA\BlogQA_OpenAISettings::OPTION_NAME );
+	}
+
 	foreach ( array_reverse( $created_post_ids ) as $post_id ) {
 		if ( $post_id > 0 ) {
 			wp_delete_post( $post_id, true );

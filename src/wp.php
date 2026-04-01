@@ -20,10 +20,13 @@ class BlogQA_WP {
 
 	protected BlogQA_SparkSeoEndpoint $spark_seo_endpoint;
 
+	protected BlogQA_OpenAISettingsPage $openai_settings_page;
+
 	public function __construct() {
 		$this->dashboard = new BlogQA_Dashboard();
 		$this->qa_endpoint = new BlogQA_QAEndpoint();
 		$this->spark_seo_endpoint = new BlogQA_SparkSeoEndpoint();
+		$this->openai_settings_page = new BlogQA_OpenAISettingsPage();
 		$this->register_hook_callbacks();
 	}
 
@@ -32,6 +35,7 @@ class BlogQA_WP {
 	 */
 	public function register_hook_callbacks() : void {
 		add_action( 'admin_enqueue_scripts', array( $this, 'load_resources' ) );
+		$this->openai_settings_page->register_hooks();
 	}
 
 	/**
