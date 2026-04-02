@@ -13,6 +13,8 @@ include_once ABSPATH . 'wp-admin/includes/plugin.php';
  */
 class BlogQA_PostData {
 
+	public const KEYWORDS_META_MAX_LENGTH = 5000;
+
 	protected int $post_id;
 
 	protected string $seo_plugin = 'meta';
@@ -129,6 +131,60 @@ class BlogQA_PostData {
 		}
 
 		return array_values( $keywords );
+	}
+
+	/**
+	 * Sanitize and cap the freeform secondary-keyword textarea payload.
+	 */
+	public static function sanitize_secondary_keywords_text( string $secondary_keywords_text ) : string {
+		$sanitized = sanitize_textarea_field( $secondary_keywords_text );
+
+		if ( function_exists( 'mb_substr' ) ) {
+			return mb_substr( $sanitized, 0, self::KEYWORDS_META_MAX_LENGTH );
+		}
+
+		return substr( $sanitized, 0, self::KEYWORDS_META_MAX_LENGTH );
+	}
+
+	/**
+	 * Persist the canonical `keywords` meta from sanitized secondary-keyword text.
+	 */
+	public static function update_keywords_meta_from_secondary_keywords( int $post_id, string $secondary_keywords_text ) : void {
+		$post_data = new self( $post_id );
+		$secondary_keywords = $post_data->normalize_keyword_list( self::sanitize_secondary_keywords_text( $secondary_keywords_text ) );
+		$main_keyword = $post_data->normalize_string( $post_data->get_main_keyword() );
+		$keywords = array();
+
+		if ( '' !== $main_keyword ) {
+			$keywords[] = $main_keyword;
+		}
+
+		foreach ( $secondary_keywords as $secondary_keyword ) {
+			if (
+				'' !== $main_keyword
+				&& $post_data->normalize_keyword_for_comparison( $main_keyword ) === $post_data->normalize_keyword_for_comparison( $secondary_keyword )
+			) {
+				continue;
+			}
+
+			$keywords[] = $secondary_keyword;
+		}
+
+		if ( empty( $keywords ) ) {
+			if ( '' !== $post_data->normalize_string( get_post_meta( $post_id, 'keywords', true ) ) ) {
+				delete_post_meta( $post_id, 'keywords' );
+			}
+			return;
+		}
+
+		$keywords_meta_value = implode( ', ', $keywords );
+		$current_keywords_meta_value = $post_data->normalize_string( get_post_meta( $post_id, 'keywords', true ) );
+
+		if ( $current_keywords_meta_value === $keywords_meta_value ) {
+			return;
+		}
+
+		update_post_meta( $post_id, 'keywords', $keywords_meta_value );
 	}
 
 	/**

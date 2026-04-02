@@ -5,6 +5,7 @@
  * @var string $location
  * @var int $pillar_post_id
  * @var string $pillar_post_label
+ * @var string $secondary_keywords
  * @var string $formatted_last_run
  * @var string $score_text
  * @var array<int, array<string, mixed>> $results
@@ -72,6 +73,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<span id="blogqa-spinner" class="spinner blogqa-spinner" aria-hidden="true"></span>
 			</div>
 		</div>
+	</div>
+
+	<div class="blogqa-field">
+		<label class="blogqa-label" for="blogqa-secondary-keywords">
+			<?php esc_html_e( 'Secondary keywords', 'sparkignite-blog-qa' ); ?>
+		</label>
+		<textarea
+			id="blogqa-secondary-keywords"
+			name="blogqa_secondary_keywords"
+			class="large-text"
+			rows="4"
+			aria-describedby="blogqa-secondary-keywords-help"
+		><?php echo esc_textarea( $secondary_keywords ); ?></textarea>
+		<p id="blogqa-secondary-keywords-help" class="description">
+			<?php esc_html_e( 'Optional. Enter secondary keywords as a comma-separated list. Changes are saved when you run QA or update the post.', 'sparkignite-blog-qa' ); ?>
+		</p>
 	</div>
 
 	<div class="blogqa-summary">

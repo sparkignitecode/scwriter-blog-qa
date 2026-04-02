@@ -4,6 +4,7 @@ namespace BlogQA\API;
 
 use BlogQA\BlogQA_Checker;
 use BlogQA\BlogQA_PillarPostContext;
+use BlogQA\BlogQA_PostData;
 use WP_Error;
 use WP_Post;
 use WP_REST_Request;
@@ -57,6 +58,12 @@ class BlogQA_QAEndpoint {
 						'sanitize_callback' => 'absint',
 						'validate_callback' => array( $this, 'validate_pillar_post_id' ),
 					),
+					'secondary_keywords' => array(
+						'type' => 'string',
+						'required' => false,
+						'default' => '',
+						'sanitize_callback' => array( $this, 'sanitize_secondary_keywords' ),
+					),
 				),
 			)
 		);
@@ -91,10 +98,6 @@ class BlogQA_QAEndpoint {
 	 */
 	public function can_run_checks( WP_REST_Request $request ) {
 		$post_id = (int) $request->get_param( 'post_id' );
-
-		if ( $post_id <= 0 ) {
-			return true;
-		}
 
 		if ( ! get_post( $post_id ) ) {
 			if ( blogqa_user_can_use_plugin() ) {
@@ -134,8 +137,17 @@ class BlogQA_QAEndpoint {
 			);
 		}
 
+		if ( ! blogqa_user_can_run_qa_for_post( $post_id ) ) {
+			return new WP_Error(
+				'blogqa_forbidden',
+				__( 'You are not allowed to edit this post for Spark Ignite Blog QA.', 'sparkignite-blog-qa' ),
+				array( 'status' => 403 )
+			);
+		}
+
 		$location = $this->sanitize_location( $request->get_param( 'location' ), $request, 'location' );
 		$pillar_post_id = absint( $request->get_param( 'pillar_post_id' ) );
+		$secondary_keywords = $this->sanitize_secondary_keywords( $request->get_param( 'secondary_keywords' ), $request, 'secondary_keywords' );
 		$pillar_post_id = $this->resolve_effective_pillar_post_id( $post_id, $pillar_post_id );
 
 		update_post_meta( $post_id, '_blog_qa_location', $location );
@@ -147,6 +159,7 @@ class BlogQA_QAEndpoint {
 
 		delete_post_meta( $post_id, '_blog_qa_pillar_post_url' );
 		delete_post_meta( $post_id, '_blog_qa_pb_secondary_keywords' );
+		BlogQA_PostData::update_keywords_meta_from_secondary_keywords( $post_id, $secondary_keywords );
 
 		$results = ( new BlogQA_Checker( $post_id ) )->run( $pillar_post_id );
 
@@ -167,6 +180,16 @@ class BlogQA_QAEndpoint {
 	 */
 	public function sanitize_location( $value, ?WP_REST_Request $request = null, string $param = '' ) : string {
 		return sanitize_text_field( trim( (string) $value ) );
+	}
+
+	/**
+	 * Sanitize and cap the freeform secondary-keyword textarea payload.
+	 *
+	 * @param mixed $value
+	 */
+	public function sanitize_secondary_keywords( $value, ?WP_REST_Request $request = null, string $param = '' ) : string {
+		// Truncate instead of rejecting so an oversized paste still runs QA with a safe canonical meta value.
+		return BlogQA_PostData::sanitize_secondary_keywords_text( (string) $value );
 	}
 
 	/**

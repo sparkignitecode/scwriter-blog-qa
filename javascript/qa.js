@@ -179,6 +179,7 @@
 		var pillarPostLabelInput = document.getElementById("blogqa-pillar-post-label");
 		var pillarPostResults = document.getElementById("blogqa-pillar-post-results");
 		var pillarModeNode = document.getElementById("blogqa-pillar-mode");
+		var secondaryKeywordsInput = document.getElementById("blogqa-secondary-keywords");
 		var runButton = document.getElementById("blogqa-run-button");
 		var spinner = document.getElementById("blogqa-spinner");
 		var scoreNode = document.getElementById("blogqa-score");
@@ -511,6 +512,14 @@
 				strings.pillarSearchPlaceholder || "Search pillar posts";
 		}
 
+		if (
+			secondaryKeywordsInput &&
+			typeof data.secondaryKeywords === "string" &&
+			!secondaryKeywordsInput.value
+		) {
+			secondaryKeywordsInput.value = data.secondaryKeywords;
+		}
+
 		syncPillarSelectionState();
 		updateCurrentModeText();
 		renderResults(Array.isArray(data.initialResults) ? data.initialResults : []);
@@ -567,6 +576,7 @@
 			setLoading(true);
 
 			var pillarPostIdValue = getTrimmedValue(pillarPostIdInput);
+			var secondaryKeywordsValue = getTrimmedValue(secondaryKeywordsInput);
 
 			fetch(data.restUrl, {
 				method: "POST",
@@ -578,6 +588,7 @@
 				body: JSON.stringify({
 					location: locationValue,
 					pillar_post_id: pillarPostIdValue,
+					secondary_keywords: secondaryKeywordsValue,
 				}),
 			})
 				.then(function (response) {

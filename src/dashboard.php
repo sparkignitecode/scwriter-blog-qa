@@ -47,6 +47,7 @@ class BlogQA_Dashboard {
 		$location = $this->get_initial_location( $post->ID );
 		$pillar_post_id = $this->get_initial_pillar_post_id( $post->ID );
 		$pillar_post_label = $this->get_pillar_post_label( $pillar_post_id );
+		$secondary_keywords = implode( ', ', ( new BlogQA_PostData( $post->ID ) )->get_secondary_keywords() );
 		$results = get_post_meta( $post->ID, '_blog_qa_results', true );
 		if ( ! is_array( $results ) ) {
 			$results = array();
@@ -58,7 +59,7 @@ class BlogQA_Dashboard {
 		$is_ai_key_configured = $openai_settings->has_api_key();
 		$ai_key_notice = $openai_settings->get_missing_key_notice();
 
-		$this->localize_script( $post->ID, $location, $pillar_post_id, $pillar_post_label, $results, $last_run, $last_run_mode );
+		$this->localize_script( $post->ID, $location, $pillar_post_id, $pillar_post_label, $secondary_keywords, $results, $last_run, $last_run_mode );
 
 		$formatted_last_run = $this->format_last_run( $last_run );
 		$score_text = $this->format_score( $results );
@@ -100,6 +101,13 @@ class BlogQA_Dashboard {
 		$this->update_optional_int_meta( $post_id, '_blog_qa_pillar_post_id', $pillar_post_id );
 		delete_post_meta( $post_id, '_blog_qa_pillar_post_url' );
 		delete_post_meta( $post_id, '_blog_qa_pb_secondary_keywords' );
+
+		if ( isset( $_POST['blogqa_secondary_keywords'] ) ) {
+			BlogQA_PostData::update_keywords_meta_from_secondary_keywords(
+				$post_id,
+				wp_unslash( (string) $_POST['blogqa_secondary_keywords'] )
+			);
+		}
 	}
 
 	/**
@@ -121,7 +129,7 @@ class BlogQA_Dashboard {
 	 *
 	 * @param array<int, array<string, mixed>> $results
 	 */
-	protected function localize_script( int $post_id, string $location, int $pillar_post_id, string $pillar_post_label, array $results, int $last_run, string $last_run_mode ) : void {
+	protected function localize_script( int $post_id, string $location, int $pillar_post_id, string $pillar_post_label, string $secondary_keywords, array $results, int $last_run, string $last_run_mode ) : void {
 		wp_localize_script(
 			BLOGQA_PREFIX . '-qa',
 			'scwriterBlogQaData',
@@ -132,6 +140,7 @@ class BlogQA_Dashboard {
 				'location' => $location,
 				'pillarPostId' => $pillar_post_id,
 				'pillarPostLabel' => $pillar_post_label,
+				'secondaryKeywords' => $secondary_keywords,
 				'pillarSearchUrl' => rest_url( 'scwriter-blog-qa/v1/pillar-posts' ),
 				'initialResults' => $results,
 				'lastRun' => $last_run,
@@ -140,6 +149,8 @@ class BlogQA_Dashboard {
 					'run' => __( 'Run QA', 'sparkignite-blog-qa' ),
 					'running' => __( 'Running QA...', 'sparkignite-blog-qa' ),
 					'runFirst' => __( 'Run QA to evaluate this post.', 'sparkignite-blog-qa' ),
+					'secondaryKeywordsLabel' => __( 'Secondary keywords', 'sparkignite-blog-qa' ),
+					'secondaryKeywordsHelp' => __( 'Optional. Enter secondary keywords as a comma-separated list. Changes are saved when you run QA or update the post.', 'sparkignite-blog-qa' ),
 					'lastRunNever' => __( 'Last run: Not yet', 'sparkignite-blog-qa' ),
 					'scoreEmpty' => __( 'No results yet', 'sparkignite-blog-qa' ),
 					'errorPrefix' => __( 'Unable to run QA:', 'sparkignite-blog-qa' ),
