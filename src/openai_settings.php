@@ -14,6 +14,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 class BlogQA_OpenAISettings {
 
 	public const OPTION_NAME = 'blog_qa_openai_api_key';
+	protected const SCWRITER_SETTINGS_OPTION = 'scwriter_settings';
+	protected const SCWRITER_OPENAI_MARKER = 'openai_api_key';
+	protected const VALIDATION_ENDPOINT = 'https://api.openai.com/v1/models';
+	protected const VALIDATION_TIMEOUT = 20;
 
 	protected const PAYLOAD_VERSION = 1;
 
@@ -26,6 +30,10 @@ class BlogQA_OpenAISettings {
 	 * Return the decrypted OpenAI API key or an empty string when unavailable.
 	 */
 	public function get_api_key() : string {
+		if ( ! is_multisite() ) {
+			return $this->get_single_site_scwriter_api_key();
+		}
+
 		$stored_value = $this->get_stored_value();
 		$key_id = $this->get_encryption_key_id();
 
@@ -85,6 +93,10 @@ class BlogQA_OpenAISettings {
 	 * Return whether any stored key payload exists.
 	 */
 	public function has_stored_api_key() : bool {
+		if ( ! is_multisite() ) {
+			return '' !== $this->get_single_site_scwriter_openai_setting();
+		}
+
 		return '' !== $this->get_stored_value();
 	}
 
@@ -103,7 +115,7 @@ class BlogQA_OpenAISettings {
 			return network_admin_url( 'admin.php?page=' . BlogQA_OpenAISettingsPage::MENU_SLUG );
 		}
 
-		return admin_url( 'admin.php?page=' . BlogQA_OpenAISettingsPage::MENU_SLUG );
+		return admin_url( 'admin.php?page=scwriter-settings' );
 	}
 
 	/**
@@ -111,10 +123,14 @@ class BlogQA_OpenAISettings {
 	 */
 	public function get_missing_key_notice() : string {
 		if ( is_multisite() ) {
-			return __( 'AI-backed checks will be skipped until a network administrator saves an OpenAI API key in Network Admin > Blog QA.', 'sparkignite-blog-qa' );
+			return __( 'AI-backed checks will be skipped until a network administrator saves a valid OpenAI API key in Network Admin > Blog QA.', 'sparkignite-blog-qa' );
 		}
 
-		return __( 'AI-backed checks will be skipped until an administrator saves an OpenAI API key in Blog QA > OpenAI Settings.', 'sparkignite-blog-qa' );
+		if ( '' !== $this->get_single_site_scwriter_openai_setting() ) {
+			return __( 'AI-backed checks will be skipped until Blog QA can resolve a usable OpenAI key from SEO Blog Writer > Settings. Re-save the OpenAI key there to refresh the single-site configuration.', 'sparkignite-blog-qa' );
+		}
+
+		return __( 'AI-backed checks will be skipped until an administrator saves a valid OpenAI API key in SEO Blog Writer > Settings. On single-site installs, Blog QA uses the SCwriter OpenAI setting.', 'sparkignite-blog-qa' );
 	}
 
 	/**
@@ -139,6 +155,143 @@ class BlogQA_OpenAISettings {
 		$this->cache_api_key( $encrypted_value, $this->get_encryption_key_id(), $api_key );
 
 		return true;
+	}
+
+	/**
+	 * Validate a submitted OpenAI API key before persisting it.
+	 *
+	 * @return true|WP_Error
+	 */
+	public function validate_api_key( string $api_key ) {
+		$api_key = trim( $api_key );
+
+		if ( '' === $api_key ) {
+			return new WP_Error(
+				'blogqa_openai_missing_api_key',
+				__( 'Enter an OpenAI API key before saving Blog QA settings.', 'sparkignite-blog-qa' )
+			);
+		}
+
+		try {
+			$response = wp_remote_get(
+				self::VALIDATION_ENDPOINT,
+				array(
+					'timeout' => self::VALIDATION_TIMEOUT,
+					'headers' => array(
+						'Authorization' => 'Bearer ' . $api_key,
+					),
+				)
+			);
+		} catch ( \Throwable $exception ) {
+			return new WP_Error(
+				'blogqa_openai_validation_request_failed',
+				__( 'Blog QA could not validate the OpenAI API key right now. The existing key was left unchanged.', 'sparkignite-blog-qa' )
+			);
+		}
+
+		if ( is_wp_error( $response ) ) {
+			return new WP_Error(
+				'blogqa_openai_validation_request_failed',
+				__( 'Blog QA could not validate the OpenAI API key right now. The existing key was left unchanged.', 'sparkignite-blog-qa' )
+			);
+		}
+
+		$status_code = (int) wp_remote_retrieve_response_code( $response );
+
+		if ( $status_code >= 200 && $status_code < 300 ) {
+			return true;
+		}
+
+		if ( 401 === $status_code ) {
+			return new WP_Error(
+				'blogqa_openai_invalid_api_key',
+				__( 'OpenAI rejected this API key. The existing Blog QA key was left unchanged.', 'sparkignite-blog-qa' )
+			);
+		}
+
+		if ( 403 === $status_code ) {
+			return new WP_Error(
+				'blogqa_openai_invalid_api_key',
+				__( 'OpenAI denied access for this API key. The existing Blog QA key was left unchanged.', 'sparkignite-blog-qa' )
+			);
+		}
+
+		return new WP_Error(
+			'blogqa_openai_validation_request_failed',
+			sprintf(
+				/* translators: %d: HTTP status code from the OpenAI validation request. */
+				__( 'Blog QA could not validate the OpenAI API key right now (status %d). The existing key was left unchanged.', 'sparkignite-blog-qa' ),
+				$status_code
+			)
+		);
+	}
+
+	/**
+	 * Resolve the single-site OpenAI API key from SCwriter settings.
+	 */
+	protected function get_single_site_scwriter_api_key() : string {
+		$stored_value = $this->get_single_site_scwriter_openai_setting();
+
+		if ( '' === $stored_value || self::SCWRITER_OPENAI_MARKER === $stored_value ) {
+			return '';
+		}
+
+		if ( str_starts_with( $stored_value, 'sk-' ) ) {
+			return trim( $stored_value );
+		}
+
+		$decrypted_value = $this->decrypt_scwriter_openai_setting( $stored_value );
+
+		if ( ! is_string( $decrypted_value ) ) {
+			return '';
+		}
+
+		return trim( $decrypted_value );
+	}
+
+	/**
+	 * Return the stored SCwriter single-site OpenAI setting value.
+	 */
+	protected function get_single_site_scwriter_openai_setting() : string {
+		$settings = get_option( self::SCWRITER_SETTINGS_OPTION, array() );
+
+		if ( ! is_array( $settings ) ) {
+			return '';
+		}
+
+		$value = $settings['openai_api_key'] ?? '';
+
+		return is_string( $value ) ? trim( $value ) : '';
+	}
+
+	/**
+	 * Attempt to decrypt a legacy or custom SCwriter-stored OpenAI setting.
+	 */
+	protected function decrypt_scwriter_openai_setting( string $encrypted_value ) : ?string {
+		$decoded_data = base64_decode( $encrypted_value, true );
+
+		if ( ! is_string( $decoded_data ) || 0 !== strpos( $decoded_data, 'ENCRYPTED::' ) ) {
+			return null;
+		}
+
+		$decoded_data = substr( $decoded_data, strlen( 'ENCRYPTED::' ) );
+		$parts = explode( '::', $decoded_data, 2 );
+
+		if ( 2 !== count( $parts ) ) {
+			return null;
+		}
+
+		$iv = base64_decode( $parts[0], true );
+		$encrypted_payload = base64_decode( $parts[1], true );
+
+		if ( ! is_string( $iv ) || ! is_string( $encrypted_payload ) ) {
+			return null;
+		}
+
+		$hashed_key = hash( 'sha256', 'BLABLABLA_HASH_KEY', true );
+		$plaintext = openssl_decrypt( $encrypted_payload, 'AES-256-CBC', $hashed_key, OPENSSL_RAW_DATA, $iv );
+
+		return is_string( $plaintext ) ? $plaintext : null;
 	}
 
 	/**

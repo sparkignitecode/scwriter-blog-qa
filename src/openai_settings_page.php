@@ -29,7 +29,6 @@ class BlogQA_OpenAISettingsPage {
 	 * Register WordPress hooks for the settings UI.
 	 */
 	public function register_hooks() : void {
-		add_action( 'admin_menu', array( $this, 'register_admin_menu' ) );
 		add_action( 'network_admin_menu', array( $this, 'register_network_admin_menu' ) );
 		add_action( 'admin_post_' . self::SAVE_ACTION, array( $this, 'handle_save' ) );
 	}
@@ -38,27 +37,7 @@ class BlogQA_OpenAISettingsPage {
 	 * Register the single-site Blog QA menu and settings page.
 	 */
 	public function register_admin_menu() : void {
-		if ( is_multisite() ) {
-			return;
-		}
-
-		add_menu_page(
-			__( 'Blog QA OpenAI Settings', 'sparkignite-blog-qa' ),
-			__( 'Blog QA', 'sparkignite-blog-qa' ),
-			'manage_options',
-			self::MENU_SLUG,
-			array( $this, 'render_site_page' ),
-			'dashicons-pressthis'
-		);
-
-		add_submenu_page(
-			self::MENU_SLUG,
-			__( 'OpenAI Settings', 'sparkignite-blog-qa' ),
-			__( 'OpenAI Settings', 'sparkignite-blog-qa' ),
-			'manage_options',
-			self::MENU_SLUG,
-			array( $this, 'render_site_page' )
-		);
+		return;
 	}
 
 	/**
@@ -83,11 +62,7 @@ class BlogQA_OpenAISettingsPage {
 	 * Render the single-site settings page.
 	 */
 	public function render_site_page() : void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			return;
-		}
-
-		$this->render_page( false );
+		wp_die( esc_html__( 'OpenAI settings are available only in network admin on multisite installs. On single-site installs, Blog QA uses the SCwriter settings page.', 'sparkignite-blog-qa' ) );
 	}
 
 	/**
@@ -109,11 +84,11 @@ class BlogQA_OpenAISettingsPage {
 		$is_network = 'network' === $scope;
 		$required_capability = $is_network ? 'manage_network_options' : 'manage_options';
 
-		if ( $is_network && ! is_multisite() ) {
-			wp_die( esc_html__( 'Network settings are not available on this site.', 'sparkignite-blog-qa' ) );
+		if ( ! is_multisite() ) {
+			wp_die( esc_html__( 'OpenAI settings are available only in network admin on multisite installs. On single-site installs, Blog QA uses the SCwriter settings page.', 'sparkignite-blog-qa' ) );
 		}
 
-		if ( is_multisite() && ! $is_network ) {
+		if ( ! $is_network ) {
 			wp_die( esc_html__( 'OpenAI settings must be managed from network admin on multisite installs.', 'sparkignite-blog-qa' ) );
 		}
 
@@ -136,6 +111,12 @@ class BlogQA_OpenAISettingsPage {
 			$this->redirect_with_status( $redirect_url, 'unchanged' );
 		}
 
+		$validation_result = $this->settings->validate_api_key( $submitted_api_key );
+
+		if ( is_wp_error( $validation_result ) ) {
+			$this->redirect_with_status( $redirect_url, $validation_result->get_error_code() );
+		}
+
 		$result = $this->settings->save_api_key( $submitted_api_key );
 
 		if ( is_wp_error( $result ) ) {
@@ -156,7 +137,7 @@ class BlogQA_OpenAISettingsPage {
 			: __( 'Blog QA OpenAI Settings', 'sparkignite-blog-qa' );
 		$description = $is_network
 			? __( 'This encrypted OpenAI API key is stored once for the entire network and is used by Blog QA on every subsite.', 'sparkignite-blog-qa' )
-			: __( 'This encrypted OpenAI API key is stored for this site and is used by Blog QA AI checks.', 'sparkignite-blog-qa' );
+			: __( 'On single-site installs, Blog QA uses the OpenAI setting from the SCwriter plugin instead of a separate Blog QA settings page.', 'sparkignite-blog-qa' );
 		$form_action = admin_url( 'admin-post.php' );
 		$submit_label = $has_stored_key
 			? __( 'Update OpenAI API Key', 'sparkignite-blog-qa' )
@@ -247,6 +228,12 @@ class BlogQA_OpenAISettingsPage {
 		} elseif ( 'missing_key' === $status ) {
 			$notice_class = 'notice-error';
 			$message = __( 'Enter an OpenAI API key before saving. Leave the field blank only when you want to keep an existing key unchanged.', 'sparkignite-blog-qa' );
+		} elseif ( 'blogqa_openai_invalid_api_key' === $status ) {
+			$notice_class = 'notice-error';
+			$message = __( 'OpenAI rejected this API key. The existing Blog QA key was left unchanged.', 'sparkignite-blog-qa' );
+		} elseif ( 'blogqa_openai_validation_request_failed' === $status ) {
+			$notice_class = 'notice-error';
+			$message = __( 'Blog QA could not validate the OpenAI API key right now. The existing key was left unchanged. Try again in a moment.', 'sparkignite-blog-qa' );
 		} elseif ( 'blogqa_openai_crypto_unavailable' === $status ) {
 			$notice_class = 'notice-error';
 			$message = __( 'The server could not store the OpenAI API key securely because supported cryptography is unavailable.', 'sparkignite-blog-qa' );

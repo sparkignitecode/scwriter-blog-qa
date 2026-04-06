@@ -165,7 +165,7 @@ class BlogQA_PillarPostChecks extends BlogQA_CheckBase {
 			$response = wp_remote_post(
 				'https://api.openai.com/v1/chat/completions',
 				array(
-					'timeout' => 30,
+					'timeout' => 60,
 					'headers' => array(
 						'Authorization' => 'Bearer ' . $openai_api_key,
 						'Content-Type' => 'application/json',

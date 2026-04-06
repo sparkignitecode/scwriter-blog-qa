@@ -13,6 +13,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class AIStrategy extends BlogQA_CheckBase {
 
+	protected const OPENAI_TIMEOUT = 60;
+
 	/**
 	 * Run AI checks 6.1, 6.3, and 6.4.
 	 *
@@ -47,7 +49,7 @@ class AIStrategy extends BlogQA_CheckBase {
 			$response = wp_remote_post(
 				'https://api.openai.com/v1/chat/completions',
 				array(
-					'timeout' => 30,
+					'timeout' => self::OPENAI_TIMEOUT,
 					'headers' => array(
 						'Authorization' => 'Bearer ' . $openai_api_key,
 						'Content-Type' => 'application/json',
@@ -57,7 +59,7 @@ class AIStrategy extends BlogQA_CheckBase {
 			);
 
 			if ( is_wp_error( $response ) ) {
-				return $this->build_uniform_results( 'error', $response->get_error_message() );
+				return $this->build_uniform_results( 'error', $this->get_wp_error_message( $response ) );
 			}
 
 			$status_code = (int) wp_remote_retrieve_response_code( $response );
@@ -332,13 +334,37 @@ class AIStrategy extends BlogQA_CheckBase {
 	 */
 	protected function get_http_error_message( $response, int $status_code ) : string {
 		$default_message = sprintf( 'OpenAI API request failed with status %d', $status_code );
-		$body = json_decode( wp_remote_retrieve_body( $response ), true );
 
-		if ( isset( $body['error']['message'] ) && is_string( $body['error']['message'] ) ) {
-			return sprintf( '%s: %s', $default_message, $body['error']['message'] );
+		if ( 401 === $status_code ) {
+			return $default_message . '. Save a valid OpenAI API key in Blog QA settings.';
+		}
+
+		if ( 403 === $status_code ) {
+			return $default_message . '. OpenAI denied access for the configured Blog QA key.';
+		}
+
+		if ( 429 === $status_code ) {
+			return $default_message . '. OpenAI rate-limited the request. Try again shortly.';
+		}
+
+		if ( $status_code >= 500 ) {
+			return $default_message . '. OpenAI returned a server error. Try again later.';
 		}
 
 		return $default_message;
+	}
+
+	/**
+	 * Build a readable message from a WP_Error returned by the HTTP client.
+	 */
+	protected function get_wp_error_message( \WP_Error $error ) : string {
+		$message = trim( $error->get_error_message() );
+
+		if ( false !== stripos( $message, 'cURL error 28' ) || false !== stripos( $message, 'timed out' ) ) {
+			return 'OpenAI API request timed out after 60 seconds. Try again. If it keeps happening, re-save the OpenAI key in settings and check server outbound HTTPS access.';
+		}
+
+		return '' !== $message ? $message : 'OpenAI API request failed.';
 	}
 
 	/**
