@@ -266,10 +266,17 @@
 					var checksHtml = checks
 						.map(function (check) {
 							var status = typeof check.status === "string" ? check.status : "error";
-							var reason =
-								typeof check.reason === "string" && status !== "pass"
-									? check.reason
-									: "";
+							var reason = typeof check.reason === "string" ? check.reason : "";
+							var details = Array.isArray(check.details) ? check.details : [];
+							var detailsHtml = details.length
+								? '<ul class="blogqa-check-details">' +
+									details
+										.map(function (detail) {
+											return "<li>" + escapeHtml(detail) + "</li>";
+										})
+										.join("") +
+									"</ul>"
+								: "";
 
 							return (
 								'<div class="blogqa-check">' +
@@ -288,6 +295,7 @@
 								(reason
 									? '<p class="blogqa-check-reason">' + escapeHtml(reason) + "</p>"
 									: "") +
+								detailsHtml +
 								"</div>"
 							);
 						})

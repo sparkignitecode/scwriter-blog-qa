@@ -130,6 +130,12 @@
 	margin-bottom: 0;
 }
 
+.blogqa-run-note {
+	color: var(--blogqa-muted);
+	margin: 0;
+	max-width: 320px;
+}
+
 .blogqa-label-placeholder {
 	visibility: hidden;
 }
@@ -326,6 +332,16 @@
 	color: var(--blogqa-muted);
 	margin: 8px 0 0;
 	white-space: pre-line;
+}
+
+.blogqa-check-details {
+	color: var(--blogqa-muted);
+	margin: 8px 0 0 18px;
+	padding: 0;
+}
+
+.blogqa-check-details li {
+	margin: 0 0 6px;
 }
 
 .blogqa-meta-box.is-loading .blogqa-results {

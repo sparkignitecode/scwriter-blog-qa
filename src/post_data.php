@@ -89,8 +89,12 @@ class BlogQA_PostData {
 	 * Return the SEO meta title from the active SEO source.
 	 */
 	public function get_meta_title() : string {
+		if ( 'yoast' === $this->seo_plugin ) {
+			return $this->read_yoast_meta_value( '_yoast_wpseo_title' );
+		}
+
 		return $this->read_seo_value(
-			'_yoast_wpseo_title',
+			'',
 			'_wds_title',
 			'seo_meta_title'
 		);
@@ -100,8 +104,12 @@ class BlogQA_PostData {
 	 * Return the SEO meta description from the active SEO source.
 	 */
 	public function get_meta_description() : string {
+		if ( 'yoast' === $this->seo_plugin ) {
+			return $this->read_yoast_meta_value( '_yoast_wpseo_metadesc' );
+		}
+
 		return $this->read_seo_value(
-			'_yoast_wpseo_metadesc',
+			'',
 			'_wds_metadesc',
 			'seo_meta_description'
 		);
@@ -271,6 +279,29 @@ class BlogQA_PostData {
 		}
 
 		return $this->normalize_string( get_post_meta( $this->post_id, $meta_key, true ) );
+	}
+
+	/**
+	 * Read a Yoast text value and resolve replacement variables when present.
+	 */
+	protected function read_yoast_meta_value( string $meta_key ) : string {
+		$value = $this->normalize_string( get_post_meta( $this->post_id, $meta_key, true ) );
+
+		if ( '' === $value || false === strpos( $value, '%%' ) ) {
+			return $value;
+		}
+
+		if ( ! function_exists( 'wpseo_replace_vars' ) ) {
+			return $value;
+		}
+
+		$post = get_post( $this->post_id );
+
+		if ( ! $post ) {
+			return $value;
+		}
+
+		return $this->normalize_string( wpseo_replace_vars( $value, $post ) );
 	}
 
 	/**

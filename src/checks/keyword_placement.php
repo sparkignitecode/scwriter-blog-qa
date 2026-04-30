@@ -154,7 +154,7 @@ class KeywordPlacement extends BlogQA_CheckBase {
 	 * Check 1.7.
 	 *
 	 * @param array<int, string> $headings
-	 * @return array<string, string>
+	 * @return array<string, mixed>
 	 */
 	protected function check_main_keyword_headings( string $main_keyword, array $headings ) : array {
 		if ( '' === $main_keyword ) {
@@ -178,7 +178,7 @@ class KeywordPlacement extends BlogQA_CheckBase {
 	 *
 	 * @param array<int, string> $secondary_keywords
 	 * @param array<int, string> $headings
-	 * @return array<string, string>
+	 * @return array<string, mixed>
 	 */
 	protected function check_secondary_keyword_headings( array $secondary_keywords, array $headings ) : array {
 		if ( empty( $secondary_keywords ) ) {
@@ -187,23 +187,42 @@ class KeywordPlacement extends BlogQA_CheckBase {
 
 		$best_keyword = '';
 		$best_count = 0;
+		$best_matches = array();
 
 		foreach ( $secondary_keywords as $keyword ) {
-			$matches = $this->count_heading_matches( $headings, (string) $keyword );
+			$matches = $this->get_heading_matches( $headings, (string) $keyword );
+			$match_count = count( $matches );
 
-			if ( $matches > $best_count ) {
-				$best_count = $matches;
+			if ( $match_count > $best_count ) {
+				$best_count = $match_count;
 				$best_keyword = (string) $keyword;
+				$best_matches = $matches;
 			}
 		}
 
+		$details = array_map(
+			static fn( string $heading ) : string => sprintf( 'Matched heading: %s', $heading ),
+			array_slice( $best_matches, 0, 3 )
+		);
+
 		return $best_count >= 2
-			? $this->build_check( '1.8', 'A secondary keyword appears in 2 or more non-H1 headings', 'pass' )
+			? $this->build_check(
+				'1.8',
+				'A secondary keyword appears in 2 or more non-H1 headings',
+				'pass',
+				sprintf( 'Matched secondary keyword "%1$s" in %2$d non-H1 heading(s).', $best_keyword, $best_count ),
+				$details
+			)
 			: $this->build_check(
 				'1.8',
 				'A secondary keyword appears in 2 or more non-H1 headings',
 				'fail',
-				sprintf( 'Best match was "%1$s" in %2$d non-H1 heading(s).', $best_keyword ?: 'none', $best_count )
+				sprintf(
+					'Best match was "%1$s" in %2$d non-H1 heading(s). The same secondary keyword must appear in 2 or more non-H1 headings.',
+					$best_keyword ?: 'none',
+					$best_count
+				),
+				$details
 			);
 	}
 

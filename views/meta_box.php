@@ -72,6 +72,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 				</button>
 				<span id="blogqa-spinner" class="spinner blogqa-spinner" aria-hidden="true"></span>
 			</div>
+			<p class="description blogqa-run-note">
+				<?php esc_html_e( 'QA checks the last saved post title and content. Save or update the post after changing headings or paragraphs, then run QA again.', 'sparkignite-blog-qa' ); ?>
+			</p>
 		</div>
 	</div>
 

@@ -59,7 +59,7 @@ function blogqa_find_section_by_label( array $results, string $label ) : ?array 
  * Return the first check with the requested ID from a section.
  *
  * @param array<string, mixed> $section
- * @return array<string, string>|null
+ * @return array<string, mixed>|null
  */
 function blogqa_find_check( array $section, string $check_id ) : ?array {
 	$checks = is_array( $section['checks'] ?? null ) ? $section['checks'] : array();
@@ -247,6 +247,60 @@ try {
 	blogqa_assert( 'pillar' === (string) get_post_meta( $support_post_id, '_blog_qa_mode', true ), 'Selecting the current post as the pillar should fall back to pillar mode.' );
 	blogqa_assert( null === blogqa_find_section_by_label( $self_results, 'Pillar Post' ), 'Self-selection should not produce the regular Pillar Post section.' );
 
+	if ( is_plugin_active( 'wordpress-seo/wp-seo.php' ) && function_exists( 'wpseo_replace_vars' ) ) {
+		blogqa_note( 'running yoast replacement assertions' );
+		$yoast_post_id = wp_insert_post(
+			array(
+				'post_type' => 'post',
+				'post_status' => 'draft',
+				'post_title' => 'Yoast Variable Post',
+				'post_content' => '<p>Yoast test content.</p>',
+			)
+		);
+		blogqa_assert( $yoast_post_id > 0, 'Could not create the Yoast verification post.' );
+		$created_post_ids[] = $yoast_post_id;
+
+		$site_name = trim( sanitize_text_field( get_bloginfo( 'name' ) ) );
+
+		update_post_meta( $yoast_post_id, '_yoast_wpseo_title', '%%title%% %%sitename%%' );
+		update_post_meta( $yoast_post_id, '_yoast_wpseo_metadesc', 'About %%title%% on %%sitename%%.' );
+
+		$yoast_post_data = new \BlogQA\BlogQA_PostData( $yoast_post_id );
+
+		blogqa_assert(
+			'Yoast Variable Post ' . $site_name === $yoast_post_data->get_meta_title(),
+			'Yoast meta title templates should resolve to plain text.'
+		);
+		blogqa_assert(
+			'About Yoast Variable Post on ' . $site_name . '.' === $yoast_post_data->get_meta_description(),
+			'Yoast meta description templates should resolve to plain text.'
+		);
+
+		update_post_meta( $yoast_post_id, '_yoast_wpseo_title', 'Plain SEO Title' );
+		update_post_meta( $yoast_post_id, '_yoast_wpseo_metadesc', 'Plain SEO description.' );
+
+		blogqa_assert(
+			'Plain SEO Title' === $yoast_post_data->get_meta_title(),
+			'Plain Yoast meta titles should be returned unchanged.'
+		);
+		blogqa_assert(
+			'Plain SEO description.' === $yoast_post_data->get_meta_description(),
+			'Plain Yoast meta descriptions should be returned unchanged.'
+		);
+
+		update_post_meta( $yoast_post_id, '_yoast_wpseo_title', '' );
+		update_post_meta( $yoast_post_id, '_yoast_wpseo_metadesc', '' );
+
+		blogqa_assert(
+			'' === $yoast_post_data->get_meta_title(),
+			'Empty Yoast meta titles should stay empty.'
+		);
+		blogqa_assert(
+			'' === $yoast_post_data->get_meta_description(),
+			'Empty Yoast meta descriptions should stay empty.'
+		);
+	}
+
 	$pillar_post_data = array(
 		'title' => 'Karate Basics',
 		'main_keyword' => 'karate basics',
@@ -278,6 +332,76 @@ try {
 	$image_section = ( new \BlogQA\Checks\PillarImages() )->run( $pillar_post_data );
 	blogqa_assert( 'pass' === ( blogqa_find_check( $image_section, '4.1' )['status'] ?? '' ), 'Pillar images should require a featured image.' );
 	blogqa_assert( 'pass' === ( blogqa_find_check( $image_section, '4.2' )['status'] ?? '' ), 'Pillar images should enforce the correct in-article image band.' );
+
+	blogqa_note( 'running keyword placement assertions' );
+	$keyword_placement = new \BlogQA\Checks\KeywordPlacement();
+	$keyword_pass_section = $keyword_placement->run(
+		array(
+			'title' => 'Karate Basics',
+			'main_keyword' => 'karate basics',
+			'secondary_keywords' => array( 'beginner karate guide', 'kids karate classes' ),
+			'content' => '<h2>Beginner Karate Guide for Families</h2><h3>Choosing a Beginner Karate Guide Program</h3><p>Short paragraph.</p>',
+			'meta_title' => '',
+			'slug' => 'karate-basics',
+		)
+	);
+	$keyword_pass_check = blogqa_find_check( $keyword_pass_section, '1.8' );
+	blogqa_assert( 'pass' === ( $keyword_pass_check['status'] ?? '' ), 'Check 1.8 should pass when the same secondary keyword appears in at least two non-H1 headings.' );
+	blogqa_assert( false !== strpos( (string) ( $keyword_pass_check['reason'] ?? '' ), 'beginner karate guide' ), 'Check 1.8 pass reason should name the matched secondary keyword.' );
+	blogqa_assert( 2 === count( $keyword_pass_check['details'] ?? array() ), 'Check 1.8 pass details should list the matched headings.' );
+
+	$keyword_single_match_section = $keyword_placement->run(
+		array(
+			'title' => 'Karate Basics',
+			'main_keyword' => 'karate basics',
+			'secondary_keywords' => array( 'beginner karate guide' ),
+			'content' => '<h2>Beginner Karate Guide for Families</h2><h3>Choosing the Right Dojo</h3><p>Short paragraph.</p>',
+			'meta_title' => '',
+			'slug' => 'karate-basics',
+		)
+	);
+	$keyword_single_match_check = blogqa_find_check( $keyword_single_match_section, '1.8' );
+	blogqa_assert( 'fail' === ( $keyword_single_match_check['status'] ?? '' ), 'Check 1.8 should fail when the best keyword appears only once.' );
+	blogqa_assert( false !== strpos( (string) ( $keyword_single_match_check['reason'] ?? '' ), 'beginner karate guide' ), 'Check 1.8 fail reason should name the best-matching secondary keyword.' );
+	blogqa_assert( false !== strpos( (string) ( $keyword_single_match_check['details'][0] ?? '' ), 'Beginner Karate Guide for Families' ), 'Check 1.8 fail details should list the matched heading text.' );
+
+	$keyword_split_match_section = $keyword_placement->run(
+		array(
+			'title' => 'Karate Basics',
+			'main_keyword' => 'karate basics',
+			'secondary_keywords' => array( 'beginner karate guide', 'kids karate classes' ),
+			'content' => '<h2>Beginner Karate Guide for Families</h2><h3>Kids Karate Classes in Austin</h3><p>Short paragraph.</p>',
+			'meta_title' => '',
+			'slug' => 'karate-basics',
+		)
+	);
+	$keyword_split_match_check = blogqa_find_check( $keyword_split_match_section, '1.8' );
+	blogqa_assert( 'fail' === ( $keyword_split_match_check['status'] ?? '' ), 'Check 1.8 should fail when two different secondary keywords only appear once each.' );
+	blogqa_assert( false !== strpos( (string) ( $keyword_split_match_check['reason'] ?? '' ), 'same secondary keyword must appear in 2 or more non-H1 headings' ), 'Check 1.8 fail reason should explain the repeated same-keyword requirement.' );
+
+	blogqa_note( 'running paragraph detail assertions' );
+	$content_quality_section = ( new \BlogQA\Checks\ContentQuality() )->run(
+		array(
+			'title' => 'Karate Basics',
+			'content' => '<p>One. Two. Three. Four. Five.</p><p>Short. Two.</p><p>Alpha. Beta. Gamma. Delta. Epsilon. Zeta.</p>',
+		)
+	);
+	$content_quality_check = blogqa_find_check( $content_quality_section, '2.4' );
+	blogqa_assert( 'fail' === ( $content_quality_check['status'] ?? '' ), 'Regular-mode paragraph-length check should fail when paragraphs exceed four sentences.' );
+	blogqa_assert( 2 === count( $content_quality_check['details'] ?? array() ), 'Regular-mode paragraph-length check should list every failing paragraph.' );
+	blogqa_assert( false !== strpos( (string) ( $content_quality_check['details'][0] ?? '' ), 'Paragraph 1 (5 sentences): One. Two. Three. Four. Five.' ), 'Regular-mode paragraph details should include the paragraph number and sentence count.' );
+	blogqa_assert( false !== strpos( (string) ( $content_quality_check['details'][1] ?? '' ), 'Paragraph 3 (6 sentences): Alpha. Beta. Gamma. Delta. Epsilon. Zeta.' ), 'Regular-mode paragraph details should preserve DOM paragraph order.' );
+
+	$pillar_structure_details_section = ( new \BlogQA\Checks\PillarStructure() )->run(
+		array(
+			'title' => 'Karate Basics',
+			'content' => '<h2 id="overview">Overview</h2><p>One. Two. Three. Four. Five.</p><p>Short. Two.</p>',
+		)
+	);
+	$pillar_structure_check = blogqa_find_check( $pillar_structure_details_section, '2.7' );
+	blogqa_assert( 'fail' === ( $pillar_structure_check['status'] ?? '' ), 'Pillar-mode paragraph-length check should fail when a paragraph exceeds four sentences.' );
+	blogqa_assert( 1 === count( $pillar_structure_check['details'] ?? array() ), 'Pillar-mode paragraph-length check should list failing paragraphs.' );
+	blogqa_assert( false !== strpos( (string) ( $pillar_structure_check['details'][0] ?? '' ), 'Paragraph 1 (5 sentences): One. Two. Three. Four. Five.' ), 'Pillar-mode paragraph details should include the paragraph number and excerpt.' );
 
 	blogqa_note( 'running mocked internal-linking assertions' );
 	$link_tester = new BlogQATestPillarInternalLinking();

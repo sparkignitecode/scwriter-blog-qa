@@ -227,20 +227,15 @@ class PillarStructure extends BlogQA_CheckBase {
 	 * Check 2.7.
 	 *
 	 * @param array<int, string> $paragraphs
-	 * @return array<string, string>
+	 * @return array<string, mixed>
 	 */
 	protected function check_paragraph_length( array $paragraphs ) : array {
 		if ( empty( $paragraphs ) ) {
 			return $this->build_check( '2.7', 'Paragraphs contain no more than 4 sentences', 'fail', 'No paragraphs were found in the post content.' );
 		}
 
-		$too_long = 0;
-
-		foreach ( $paragraphs as $paragraph ) {
-			if ( $this->get_sentence_count( $paragraph ) > 4 ) {
-				$too_long++;
-			}
-		}
+		$details = $this->get_paragraph_failure_details( $paragraphs );
+		$too_long = count( $details );
 
 		return 0 === $too_long
 			? $this->build_check( '2.7', 'Paragraphs contain no more than 4 sentences', 'pass' )
@@ -248,7 +243,8 @@ class PillarStructure extends BlogQA_CheckBase {
 				'2.7',
 				'Paragraphs contain no more than 4 sentences',
 				'fail',
-				sprintf( '%d paragraph(s) exceeded 4 sentences.', $too_long )
+				sprintf( '%d paragraph(s) exceeded 4 sentences.', $too_long ),
+				$details
 			);
 	}
 
