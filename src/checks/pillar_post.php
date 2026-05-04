@@ -141,7 +141,7 @@ class BlogQA_PillarPostChecks extends BlogQA_CheckBase {
 		}
 
 		$request_body = array(
-			'model' => 'gpt-5-mini',
+			'model' => BLOGQA_OPENAI_MODEL,
 			'messages' => array(
 				array(
 					'role' => 'system',

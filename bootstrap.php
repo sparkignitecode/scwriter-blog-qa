@@ -3,7 +3,7 @@
  * Plugin Name: Spark Ignite Blog QA
  * Plugin URI: https://sparkmembership.com
  * Description: SEO QA checks for WordPress blog posts generated with Spark Ignite.
- * Version: 0.1.0
+ * Version: 0.1.1
  * Requires at least: 6.0
  * Tested up to: 6.8.3
  * Requires PHP: 8.0
@@ -21,10 +21,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 define( 'BLOGQA_NAME', 'Spark Ignite Blog QA' );
 define( 'BLOGQA_PREFIX', 'blogqa' );
-define( 'BLOGQA_VERSION', '0.1.0' );
+define( 'BLOGQA_VERSION', '0.1.1' );
 define( 'BLOGQA_FILE', __FILE__ );
 define( 'BLOGQA_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'BLOGQA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'BLOGQA_OPENAI_MODEL', 'gpt-5.4-mini' );
 
 require_once __DIR__ . '/src/helpers.php';
 require_once __DIR__ . '/src/html_document.php';

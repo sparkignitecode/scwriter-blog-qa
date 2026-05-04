@@ -509,7 +509,7 @@ class BlogQA_LinkClassifier {
 		}
 
 		$request_body = array(
-			'model' => 'gpt-5-mini',
+			'model' => BLOGQA_OPENAI_MODEL,
 			'messages' => array(
 				array(
 					'role' => 'system',

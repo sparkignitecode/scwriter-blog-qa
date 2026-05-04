@@ -29,7 +29,7 @@ class AIStrategy extends BlogQA_CheckBase {
 		}
 
 		$request_body = array(
-			'model' => 'gpt-5-mini',
+			'model' => BLOGQA_OPENAI_MODEL,
 			'response_format' => array(
 				'type' => 'json_object',
 			),

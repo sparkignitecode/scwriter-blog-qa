@@ -64,7 +64,7 @@ The plugin evaluates the post against a fixed checklist that includes:
 - Image coverage and alt-text related checks
 - Location usage and heading/count rules tied to the selected location
 - Main keyword coverage within the post's `keywords` meta
-- AI strategy feedback using `gpt-5-mini` for title, keyword intent, and grammar on HTML-stripped post content
+- AI strategy feedback using the configured OpenAI model for title, keyword intent, and grammar on HTML-stripped post content
 
 Some checks may be reported as skipped when their prerequisites are not available, such as missing SEO metadata or a missing OpenAI API key.
 
